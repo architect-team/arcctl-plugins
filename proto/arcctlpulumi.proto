@@ -14,13 +14,13 @@ message BuildResponse {
 }
 
 message ApplyRequest {
-  string pulumi_state = 1;
-  string datacenter_id = 2;
+  string pulumistate = 1;
+  string datacenterid = 2;
   string image = 3;
   map<string, string> inputs = 4;
   bool destroy = 5;
 }
 
 message ApplyResponse {
-  string pulumi_state = 1;
+  string pulumistate = 1;
 }

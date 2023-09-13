@@ -401,8 +401,8 @@ proto.ApplyRequest.prototype.toObject = function(opt_includeInstance) {
  */
 proto.ApplyRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    pulumiState: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    datacenterId: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    pulumistate: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    datacenterid: jspb.Message.getFieldWithDefault(msg, 2, ""),
     image: jspb.Message.getFieldWithDefault(msg, 3, ""),
     inputsMap: (f = msg.getInputsMap()) ? f.toObject(includeInstance, undefined) : [],
     destroy: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
@@ -444,11 +444,11 @@ proto.ApplyRequest.deserializeBinaryFromReader = function(msg, reader) {
     switch (field) {
     case 1:
       var value = /** @type {string} */ (reader.readString());
-      msg.setPulumiState(value);
+      msg.setPulumistate(value);
       break;
     case 2:
       var value = /** @type {string} */ (reader.readString());
-      msg.setDatacenterId(value);
+      msg.setDatacenterid(value);
       break;
     case 3:
       var value = /** @type {string} */ (reader.readString());
@@ -493,14 +493,14 @@ proto.ApplyRequest.prototype.serializeBinary = function() {
  */
 proto.ApplyRequest.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getPulumiState();
+  f = message.getPulumistate();
   if (f.length > 0) {
     writer.writeString(
       1,
       f
     );
   }
-  f = message.getDatacenterId();
+  f = message.getDatacenterid();
   if (f.length > 0) {
     writer.writeString(
       2,
@@ -529,10 +529,10 @@ proto.ApplyRequest.serializeBinaryToWriter = function(message, writer) {
 
 
 /**
- * optional string pulumi_state = 1;
+ * optional string pulumistate = 1;
  * @return {string}
  */
-proto.ApplyRequest.prototype.getPulumiState = function() {
+proto.ApplyRequest.prototype.getPulumistate = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
@@ -541,16 +541,16 @@ proto.ApplyRequest.prototype.getPulumiState = function() {
  * @param {string} value
  * @return {!proto.ApplyRequest} returns this
  */
-proto.ApplyRequest.prototype.setPulumiState = function(value) {
+proto.ApplyRequest.prototype.setPulumistate = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
 /**
- * optional string datacenter_id = 2;
+ * optional string datacenterid = 2;
  * @return {string}
  */
-proto.ApplyRequest.prototype.getDatacenterId = function() {
+proto.ApplyRequest.prototype.getDatacenterid = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
@@ -559,7 +559,7 @@ proto.ApplyRequest.prototype.getDatacenterId = function() {
  * @param {string} value
  * @return {!proto.ApplyRequest} returns this
  */
-proto.ApplyRequest.prototype.setDatacenterId = function(value) {
+proto.ApplyRequest.prototype.setDatacenterid = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
 };
 
@@ -654,7 +654,7 @@ proto.ApplyResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.ApplyResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    pulumiState: jspb.Message.getFieldWithDefault(msg, 1, "")
+    pulumistate: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -693,7 +693,7 @@ proto.ApplyResponse.deserializeBinaryFromReader = function(msg, reader) {
     switch (field) {
     case 1:
       var value = /** @type {string} */ (reader.readString());
-      msg.setPulumiState(value);
+      msg.setPulumistate(value);
       break;
     default:
       reader.skipField();
@@ -724,7 +724,7 @@ proto.ApplyResponse.prototype.serializeBinary = function() {
  */
 proto.ApplyResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getPulumiState();
+  f = message.getPulumistate();
   if (f.length > 0) {
     writer.writeString(
       1,
@@ -735,10 +735,10 @@ proto.ApplyResponse.serializeBinaryToWriter = function(message, writer) {
 
 
 /**
- * optional string pulumi_state = 1;
+ * optional string pulumistate = 1;
  * @return {string}
  */
-proto.ApplyResponse.prototype.getPulumiState = function() {
+proto.ApplyResponse.prototype.getPulumistate = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
@@ -747,7 +747,7 @@ proto.ApplyResponse.prototype.getPulumiState = function() {
  * @param {string} value
  * @return {!proto.ApplyResponse} returns this
  */
-proto.ApplyResponse.prototype.setPulumiState = function(value) {
+proto.ApplyResponse.prototype.setPulumistate = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
 };
 

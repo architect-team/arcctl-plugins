@@ -3,9 +3,9 @@ export interface BuildInputs {
 };
 
 export interface ApplyInputs {
-  datacenter_id: string;
+  datacenterid: string;
   state?: object;
-  inputs: [string, string][]; 
+  inputs: [string, string][];
   image: string; // digest
   destroy?: boolean;
 };

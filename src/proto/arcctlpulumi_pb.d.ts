@@ -47,10 +47,10 @@ export namespace BuildResponse {
 }
 
 export class ApplyRequest extends jspb.Message { 
-    getPulumiState(): string;
-    setPulumiState(value: string): ApplyRequest;
-    getDatacenterId(): string;
-    setDatacenterId(value: string): ApplyRequest;
+    getPulumistate(): string;
+    setPulumistate(value: string): ApplyRequest;
+    getDatacenterid(): string;
+    setDatacenterid(value: string): ApplyRequest;
     getImage(): string;
     setImage(value: string): ApplyRequest;
 
@@ -71,8 +71,8 @@ export class ApplyRequest extends jspb.Message {
 
 export namespace ApplyRequest {
     export type AsObject = {
-        pulumiState: string,
-        datacenterId: string,
+        pulumistate: string,
+        datacenterid: string,
         image: string,
 
         inputsMap: Array<[string, string]>,
@@ -81,8 +81,8 @@ export namespace ApplyRequest {
 }
 
 export class ApplyResponse extends jspb.Message { 
-    getPulumiState(): string;
-    setPulumiState(value: string): ApplyResponse;
+    getPulumistate(): string;
+    setPulumistate(value: string): ApplyResponse;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ApplyResponse.AsObject;
@@ -96,6 +96,6 @@ export class ApplyResponse extends jspb.Message {
 
 export namespace ApplyResponse {
     export type AsObject = {
-        pulumiState: string,
+        pulumistate: string,
     }
 }

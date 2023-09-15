@@ -42,6 +42,9 @@ const applyPulumi = async (
   if (apply_result.state) {
     const apply_response = new ApplyResponse();
     apply_response.setPulumistate(apply_result.state);
+    for (const [key, value] of Object.entries(apply_result.outputs)) {
+      apply_response.getOutputsMap().set(key, value);
+    }
     callback(null, apply_response);
   } else if (apply_result.error) {
     callback({ details: apply_result.error, code: 2 });

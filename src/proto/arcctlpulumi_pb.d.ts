@@ -84,6 +84,9 @@ export class ApplyResponse extends jspb.Message {
     getPulumistate(): string;
     setPulumistate(value: string): ApplyResponse;
 
+    getOutputsMap(): jspb.Map<string, string>;
+    clearOutputsMap(): void;
+
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ApplyResponse.AsObject;
     static toObject(includeInstance: boolean, msg: ApplyResponse): ApplyResponse.AsObject;
@@ -97,5 +100,7 @@ export class ApplyResponse extends jspb.Message {
 export namespace ApplyResponse {
     export type AsObject = {
         pulumistate: string,
+
+        outputsMap: Array<[string, string]>,
     }
 }

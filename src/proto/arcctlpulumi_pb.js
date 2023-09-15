@@ -654,7 +654,8 @@ proto.ApplyResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.ApplyResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    pulumistate: jspb.Message.getFieldWithDefault(msg, 1, "")
+    pulumistate: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    outputsMap: (f = msg.getOutputsMap()) ? f.toObject(includeInstance, undefined) : []
   };
 
   if (includeInstance) {
@@ -695,6 +696,12 @@ proto.ApplyResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setPulumistate(value);
       break;
+    case 2:
+      var value = msg.getOutputsMap();
+      reader.readMessage(value, function(message, reader) {
+        jspb.Map.deserializeBinary(message, reader, jspb.BinaryReader.prototype.readString, jspb.BinaryReader.prototype.readString, null, "", "");
+         });
+      break;
     default:
       reader.skipField();
       break;
@@ -731,6 +738,10 @@ proto.ApplyResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getOutputsMap(true);
+  if (f && f.getLength() > 0) {
+    f.serializeBinary(2, writer, jspb.BinaryWriter.prototype.writeString, jspb.BinaryWriter.prototype.writeString);
+  }
 };
 
 
@@ -750,6 +761,28 @@ proto.ApplyResponse.prototype.getPulumistate = function() {
 proto.ApplyResponse.prototype.setPulumistate = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
 };
+
+
+/**
+ * map<string, string> outputs = 2;
+ * @param {boolean=} opt_noLazyCreate Do not create the map if
+ * empty, instead returning `undefined`
+ * @return {!jspb.Map<string,string>}
+ */
+proto.ApplyResponse.prototype.getOutputsMap = function(opt_noLazyCreate) {
+  return /** @type {!jspb.Map<string,string>} */ (
+      jspb.Message.getMapField(this, 2, opt_noLazyCreate,
+      null));
+};
+
+
+/**
+ * Clears values from the map. The map will be non-null.
+ * @return {!proto.ApplyResponse} returns this
+ */
+proto.ApplyResponse.prototype.clearOutputsMap = function() {
+  this.getOutputsMap().clear();
+  return this;};
 
 
 goog.object.extend(exports, proto);

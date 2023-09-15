@@ -17,14 +17,14 @@ export class PulumiModule extends BaseModule {
   }
 
   // run pulumi image and apply provided pulumi
-  async apply(inputs: ApplyInputs): Promise<{ state?: PulumiStateString, error?: string }> {
+  async apply(inputs: ApplyInputs): Promise<{ state?: PulumiStateString, outputs: Record<string, string>, error?: string }> {
     // set variables as secrets for the pulumi stack
     let pulumi_config = '';
     if (!inputs.datacenterid) {
       inputs.datacenterid = 'default';
     }
     if ((inputs.inputs || []).length) {
-      const config_pairs = inputs.inputs.map(([key, value]) => `--secret ${key}=${value}`).join(' ');
+      const config_pairs = inputs.inputs.map(([key, value]) => `--plaintext ${key}=${value}`).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }
     const apply_or_destroy = inputs.destroy ? 'destroy' : 'up';
@@ -34,7 +34,7 @@ export class PulumiModule extends BaseModule {
     const state_file = 'pulumi-state.json';
     const state_write_cmd = inputs.state ? `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : '';
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
-    const state_delimiter = '****STATE_DELIMITER****';
+    const pulumi_delimiter = '****PULUMI_DELIMITER****';
 
     const args = [
       'run',
@@ -51,8 +51,10 @@ export class PulumiModule extends BaseModule {
         pulumi refresh --stack ${inputs.datacenterid} --non-interactive --yes &&
         ${pulumi_config}
         pulumi ${apply_or_destroy} --stack ${inputs.datacenterid} --non-interactive --yes &&
-        echo "${state_delimiter}" &&
-        pulumi stack export --stack ${inputs.datacenterid}
+        echo "${pulumi_delimiter}" &&
+        pulumi stack export --stack ${inputs.datacenterid} &&
+        echo "${pulumi_delimiter}" &&
+        pulumi stack output -j
       `
     ];
     console.log(`Running pulumi with args: ${args.join('\n')}`);
@@ -62,10 +64,12 @@ export class PulumiModule extends BaseModule {
     let error;
     if (docker_result.error) {
       error = docker_result.error.message;
-    } else if (docker_result.stdout && !docker_result.stdout.includes(state_delimiter)) {
+    } else if (docker_result.stdout && !docker_result.stdout.includes(pulumi_delimiter)) {
       error = docker_result.stdout.toString();
     }
 
-    return { state: docker_result.stdout.toString().split(state_delimiter)[1], error };
+    const output_parts = docker_result.stdout.toString().split(pulumi_delimiter);
+    const outputs = JSON.parse(output_parts[2] || '{}');
+    return { state: output_parts[1], outputs: outputs, error };
   }
 }

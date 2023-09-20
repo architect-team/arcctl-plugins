@@ -11,6 +11,8 @@ export class PulumiModule extends BaseModule {
     let error;
     if (docker_result.error) {
       error = docker_result.error.message;
+    } else if (docker_result.stderr?.length) {
+      error = docker_result.stderr.toString();
     }
 
     return { digest: docker_result.stdout?.toString().replace('sha256:', '').trim(), error };
@@ -38,7 +40,7 @@ export class PulumiModule extends BaseModule {
 
     const args = [
       'run',
-      //'--rm',
+      '--rm',
       '--entrypoint',
       'bash',
       ...environment,
@@ -69,6 +71,8 @@ export class PulumiModule extends BaseModule {
       error = docker_result.error.message;
     } else if (docker_result.stdout && !docker_result.stdout.includes(pulumi_delimiter)) {
       error = docker_result.stdout.toString();
+    } else if (docker_result.stderr?.length) {
+      error = docker_result.stderr.toString();
     }
 
     const output_parts = docker_result.stdout.toString().split(pulumi_delimiter);

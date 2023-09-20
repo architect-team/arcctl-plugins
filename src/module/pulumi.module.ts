@@ -24,7 +24,7 @@ export class PulumiModule extends BaseModule {
       inputs.datacenterid = 'default';
     }
     if ((inputs.inputs || []).length) {
-      const config_pairs = inputs.inputs.map(([key, value]) => `--plaintext ${key}=${value}`).join(' ');
+      const config_pairs = inputs.inputs.map(([key, value]) => `--plaintext ${key}="${value}"`).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }
     const apply_or_destroy = inputs.destroy ? 'destroy' : 'up';
@@ -38,6 +38,7 @@ export class PulumiModule extends BaseModule {
 
     const args = [
       'run',
+      //'--rm',
       '--entrypoint',
       'bash',
       ...environment,
@@ -54,12 +55,14 @@ export class PulumiModule extends BaseModule {
         echo "${pulumi_delimiter}" &&
         pulumi stack export --stack ${inputs.datacenterid} &&
         echo "${pulumi_delimiter}" &&
-        pulumi stack output -j
+        pulumi stack output --show-secrets -j
       `
     ];
     console.log(`Running pulumi with args: ${args.join('\n')}`);
     console.log(JSON.stringify(inputs));
-    const docker_result = spawnSync('docker', args);
+    const docker_result = spawnSync('docker', args, {
+      stdio: 'pipe',
+    });
 
     let error;
     if (docker_result.error) {

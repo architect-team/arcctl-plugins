@@ -1,64 +1,82 @@
-import { Server, ServerCredentials, ServerUnaryCall, sendUnaryData } from '@grpc/grpc-js';
+import express, { Request, Response } from 'express';
 import { PulumiModule } from "./module/pulumi.module";
-import { ArcctlPulumiService } from './proto/arcctlpulumi_grpc_pb';
-import { ApplyRequest, ApplyResponse, BuildRequest, BuildResponse } from './proto/arcctlpulumi_pb';
 
-const buildImage = async (
-  call: ServerUnaryCall<BuildRequest, BuildResponse>,
-  callback: sendUnaryData<BuildResponse>) =>
-{
+type BuildRequest = {
+  directory: string;
+};
+
+type BuildResponse = {
+  image: string;
+};
+
+const buildImage = async (request: BuildRequest): Promise<BuildResponse> => {
   console.log('Building image');
   const pulumi_module = new PulumiModule();
   const build_result = await pulumi_module.build({
-    directory: call.request.toObject().directory
+    directory: request.directory
   });
 
   if (build_result.digest) {
-    const build_response = new BuildResponse();
-    build_response.setImage(build_result.digest);
-    callback(null, build_response);
-    console.log(`Image built: ${build_result.digest}`);
-  } else if (build_result.error) {
-    callback({ details: build_result.error, code: 2 });
-    console.log(`Error building image: ${build_result.error}`);
+    return {
+      image: build_result.digest
+    }
   }
+  throw new Error(build_result.error);
 }
 
-const applyPulumi = async (
-  call: ServerUnaryCall<ApplyRequest, ApplyResponse>,
-  callback: sendUnaryData<ApplyResponse>) =>
-{
-  const apply_request = call.request.toObject();
+type ApplyRequest = {
+  datacenterid: string;
+  image: string;
+  inputs: [string, string][];
+  pulumistate: string;
+  destroy: boolean;
+}
+
+type ApplyResponse = {
+  pulumistate: string;
+  outputs: Record<string, string>;
+}
+
+const applyPulumi = async (request: ApplyRequest): Promise<ApplyResponse> => {
   const pulumi_module = new PulumiModule();
 
   const apply_result = await pulumi_module.apply({
-    datacenterid: apply_request.datacenterid,
-    image: apply_request.image,
-    inputs: apply_request.inputsMap,
-    state: apply_request.pulumistate ? JSON.parse(apply_request.pulumistate) : undefined,
-    destroy: apply_request.destroy,
+    datacenterid: request.datacenterid,
+    image: request.image,
+    inputs: request.inputs,
+    state: request.pulumistate ? JSON.parse(request.pulumistate) : undefined,
+    destroy: request.destroy,
   });
 
   if (apply_result.state) {
-    const apply_response = new ApplyResponse();
-    apply_response.setPulumistate(apply_result.state);
-    for (const [key, value] of Object.entries(apply_result.outputs)) {
-      apply_response.getOutputsMap().set(key, value);
+    return {
+      pulumistate: JSON.stringify(apply_result.state),
+      outputs: apply_result.outputs
     }
-    callback(null, apply_response);
-  } else if (apply_result.error) {
-    callback({ details: apply_result.error, code: 2 });
   }
+  throw new Error(apply_result.error);
 }
 
 function main() {
+  const app = express()
+  app.use(express.json());
   const server_port = 50051;
-  const server = new Server();
-  server.addService(ArcctlPulumiService, { build: buildImage, apply: applyPulumi });
-  server.bindAsync(`0.0.0.0:${server_port}`, ServerCredentials.createInsecure(), () => {
-    console.log(`Started server on port ${server_port}`);
-    server.start();
+
+  app.post('/build', async (req: Request, res: Response) => {
+    console.log(JSON.stringify(req.body, null, 2));
+    res.send(await buildImage(req.body));
   });
+
+  app.post('/apply', async (req: Request, res: Response) => {
+    console.log(JSON.stringify(req.body, null, 2));
+    const response = await applyPulumi(req.body);
+    console.log(JSON.stringify(response, null, 2));
+    res.send(response);
+  });
+
+  app.listen(server_port, () => {
+    console.log(`Started server on port ${server_port}`);
+  })
 }
 
 main();

@@ -14,6 +14,5 @@ ENV PATH=$PATH:/app/.pulumi/bin/
 COPY . .
 
 RUN npm ci
-RUN npm run grpc:generate
 
 CMD [ "npm", "run", "start" ]

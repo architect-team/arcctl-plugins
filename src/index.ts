@@ -6,7 +6,8 @@ type BuildRequest = {
 };
 
 type BuildResponse = {
-  image: string;
+  image?: string;
+  error?: string;
 };
 
 const buildImage = async (request: BuildRequest): Promise<BuildResponse> => {
@@ -21,7 +22,7 @@ const buildImage = async (request: BuildRequest): Promise<BuildResponse> => {
       image: build_result.digest
     }
   }
-  throw new Error(build_result.error);
+  return { error: build_result.error };
 }
 
 type ApplyRequest = {
@@ -33,8 +34,9 @@ type ApplyRequest = {
 }
 
 type ApplyResponse = {
-  pulumistate: string;
-  outputs: Record<string, string>;
+  pulumistate?: string;
+  outputs?: Record<string, string>;
+  error?: string;
 }
 
 const applyPulumi = async (request: ApplyRequest): Promise<ApplyResponse> => {
@@ -54,7 +56,7 @@ const applyPulumi = async (request: ApplyRequest): Promise<ApplyResponse> => {
       outputs: apply_result.outputs
     }
   }
-  throw new Error(apply_result.error);
+  return { error: apply_result.error };
 }
 
 function main() {
@@ -64,19 +66,26 @@ function main() {
 
   app.post('/build', async (req: Request, res: Response) => {
     console.log(JSON.stringify(req.body, null, 2));
-    res.send(await buildImage(req.body));
+    const response = await buildImage(req.body);
+    if (response.error) {
+      res.status(500);
+    }
+    res.send(response);
   });
 
   app.post('/apply', async (req: Request, res: Response) => {
     console.log(JSON.stringify(req.body, null, 2));
     const response = await applyPulumi(req.body);
+    if (response.error) {
+      res.status(500);
+    }
     console.log(JSON.stringify(response, null, 2));
     res.send(response);
   });
 
   app.listen(server_port, () => {
     console.log(`Started server on port ${server_port}`);
-  })
+  });
 }
 
 main();

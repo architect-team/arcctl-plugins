@@ -1,5 +1,6 @@
 import { spawnSync } from 'child_process';
 import { ApplyInputs, BaseModule, BuildInputs, ImageDigest, PulumiStateString } from "./base.module";
+import path from 'path';
 
 export class PulumiModule extends BaseModule {
   // build an image that pulumi code can be run on
@@ -13,6 +14,8 @@ export class PulumiModule extends BaseModule {
       error = docker_result.error.message;
     } else if (docker_result.stderr?.length) {
       error = docker_result.stderr.toString();
+    } else if (docker_result.status === 255) {
+      error = `Error running Pulumi Docker container with the following args: ${args}`;
     }
 
     return { digest: docker_result.stdout?.toString().replace('sha256:', '').trim(), error };
@@ -25,15 +28,30 @@ export class PulumiModule extends BaseModule {
     if (!inputs.datacenterid) {
       inputs.datacenterid = 'default';
     }
+
+    const mount_directories: string[] = [];
     if ((inputs.inputs || []).length) {
-      const config_pairs = inputs.inputs.reduce((acc, element) => {
-        const [key, value] = element;
-        acc.push(`--plaintext ${key}="${value}"`);
-        if (key.includes(':')) {
-          acc.push(`--path --plaintext "${key.replace(':', '.')}"="${value}"`);
+      const literal_inputs: [string, string][] = [];
+      for (const [key, value] of inputs.inputs) {
+        if (value.startsWith('file:')) {
+          const value_without_delimiter = value.replace('file:', '');
+          const file_directory = path.parse(value_without_delimiter);
+          mount_directories.push('-v');
+          mount_directories.push(`${file_directory.dir}:${file_directory.dir}`);
+
+          literal_inputs.push([key, value.replace('file:', '')])
+        } else {
+          literal_inputs.push([key, value]);
         }
-        return acc;
-      }, [] as string[]).join(' ');
+      }
+
+      const config_pairs = literal_inputs.map((input) => {
+        const [key, value] = input;
+        if (key.includes(':')) {
+          return `--path --plaintext "${key.replace(':', '.')}"="${value}"`;
+        }
+        return `--plaintext ${key}="${value}"`.join(' ');
+      });
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }
     console.log(`Pulumi config: ${pulumi_config}`);
@@ -52,6 +70,7 @@ export class PulumiModule extends BaseModule {
       '--entrypoint',
       'bash',
       ...environment,
+      ...mount_directories,
       inputs.image,
       '-c',
       `
@@ -71,7 +90,7 @@ export class PulumiModule extends BaseModule {
     console.log(`Running pulumi with args: ${args.join('\n')}`);
     console.log(JSON.stringify(inputs));
     const docker_result = spawnSync('docker', args, {
-      stdio: 'pipe',
+      stdio: 'inherit',
     });
 
     let error;
@@ -81,10 +100,20 @@ export class PulumiModule extends BaseModule {
       error = docker_result.stdout.toString();
     } else if (docker_result.stderr?.length) {
       error = docker_result.stderr.toString();
+    } else if (docker_result.status === 255) {
+      error = `Error running Pulumi Docker container with the following args: ${args}`;
     }
 
-    const output_parts = docker_result.stdout.toString().split(pulumi_delimiter);
-    const outputs = JSON.parse(output_parts[2] || '{}');
-    return { state: output_parts[1], outputs: outputs, error };
+    const output_parts = docker_result.stdout?.toString().split(pulumi_delimiter);
+    let state;
+    if (output_parts?.length === 2) {
+      state = output_parts[1];
+    }
+    let outputs;
+    if (output_parts?.length === 3) {
+      outputs = JSON.parse(output_parts[2] || '{}');
+    }
+
+    return { state, outputs, error };
   }
 }

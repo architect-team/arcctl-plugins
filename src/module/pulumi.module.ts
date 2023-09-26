@@ -89,13 +89,15 @@ export class PulumiModule extends BaseModule {
     console.log(`Running pulumi with args: ${args.join('\n')}`);
     console.log(JSON.stringify(inputs));
     const docker_result = spawnSync('docker', args, {
-      stdio: 'inherit',
+      stdio: 'pipe',
     });
+    console.log(docker_result);
+    const stdout = docker_result.stdout?.toString();
 
     let error;
     if (docker_result.error) {
       error = docker_result.error.message;
-    } else if (docker_result.stdout && !docker_result.stdout.includes(pulumi_delimiter)) {
+    } else if (docker_result.stdout && !stdout.includes(pulumi_delimiter)) {
       error = docker_result.stdout.toString();
     } else if (docker_result.stderr?.length) {
       error = docker_result.stderr.toString();
@@ -103,13 +105,14 @@ export class PulumiModule extends BaseModule {
       error = `Error running Pulumi Docker container with the following args: ${args}`;
     }
 
-    const output_parts = docker_result.stdout?.toString().split(pulumi_delimiter);
+    const console_output = stdout?.toString();
+    const output_parts = console_output.split(pulumi_delimiter);
     let state;
-    if (output_parts?.length === 2) {
+    if (output_parts?.length >= 2) {
       state = output_parts[1];
     }
     let outputs;
-    if (output_parts?.length === 3) {
+    if (output_parts?.length >= 3) {
       outputs = JSON.parse(output_parts[2] || '{}');
     }
 

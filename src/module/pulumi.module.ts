@@ -45,13 +45,12 @@ export class PulumiModule extends BaseModule {
         }
       }
 
-      const config_pairs = literal_inputs.map((input) => {
-        const [key, value] = input;
+      const config_pairs = literal_inputs.map(([key, value]) => {
         if (key.includes(':')) {
-          return `--path --plaintext "${key.replace(':', '.')}"="${value}"`;
+          return `--path --plaintext "${key.replace(':', '.')}"="${value}" --plaintext "${key}"="${value}"`;
         }
-        return `--plaintext ${key}="${value}"`.join(' ');
-      });
+        return `--plaintext ${key}="${value}"`;
+      }).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }
     console.log(`Pulumi config: ${pulumi_config}`);

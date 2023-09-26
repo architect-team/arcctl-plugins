@@ -26,9 +26,17 @@ export class PulumiModule extends BaseModule {
       inputs.datacenterid = 'default';
     }
     if ((inputs.inputs || []).length) {
-      const config_pairs = inputs.inputs.map(([key, value]) => `--plaintext ${key}="${value}"`).join(' ');
+      const config_pairs = inputs.inputs.reduce((acc, element) => {
+        const [key, value] = element;
+        acc.push(`--plaintext ${key}="${value}"`);
+        if (key.includes(':')) {
+          acc.push(`--path --plaintext "${key.replace(':', '.')}"="${value}"`);
+        }
+        return acc;
+      }, [] as string[]).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }
+    console.log(`Pulumi config: ${pulumi_config}`);
     const apply_or_destroy = inputs.destroy ? 'destroy' : 'up';
     const environment = ['-e', 'PULUMI_CONFIG_PASSPHRASE=']; // ignore this pulumi requirement
 
@@ -40,7 +48,7 @@ export class PulumiModule extends BaseModule {
 
     const args = [
       'run',
-      '--rm',
+      //'--rm',
       '--entrypoint',
       'bash',
       ...environment,

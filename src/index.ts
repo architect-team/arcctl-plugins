@@ -1,28 +1,25 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import WebSocket from "ws";
 import { PulumiModule } from "./module/pulumi.module";
+
+type WSRequest = {
+  command: 'build';
+  request: BuildRequest;
+} | {
+  command: 'apply';
+  request: ApplyRequest;
+}
 
 type BuildRequest = {
   directory: string;
 };
 
-type BuildResponse = {
-  image?: string;
-  error?: string;
-};
-
-const buildImage = async (request: BuildRequest): Promise<BuildResponse> => {
+const buildImage = (request: BuildRequest, wsConn: WebSocket): void => {
   console.log('Building image');
   const pulumi_module = new PulumiModule();
-  const build_result = await pulumi_module.build({
+  pulumi_module.build({
     directory: request.directory
-  });
-
-  if (build_result.digest) {
-    return {
-      image: build_result.digest
-    }
-  }
-  return { error: build_result.error };
+  }, wsConn);
 }
 
 type ApplyRequest = {
@@ -33,59 +30,53 @@ type ApplyRequest = {
   destroy: boolean;
 }
 
-type ApplyResponse = {
-  pulumistate?: string;
-  outputs?: Record<string, string>;
-  error?: string;
-}
-
-const applyPulumi = async (request: ApplyRequest): Promise<ApplyResponse> => {
+const applyPulumi = (request: ApplyRequest, wsConn: WebSocket): void => {
   const pulumi_module = new PulumiModule();
-
-  const apply_result = await pulumi_module.apply({
+  pulumi_module.apply({
     datacenterid: request.datacenterid,
     image: request.image,
     inputs: request.inputs,
     state: request.pulumistate ? JSON.parse(request.pulumistate) : undefined,
     destroy: request.destroy,
-  });
+  }, wsConn);
 
-  if (apply_result.state) {
-    return {
-      pulumistate: JSON.stringify(apply_result.state),
-      outputs: apply_result.outputs
-    }
-  }
-  return { error: apply_result.error };
 }
 
 function main() {
   const app = express()
-  app.use(express.json());
-  const server_port = 50051;
+  const server_port = process.env.PORT || 50051;
 
-  app.post('/build', async (req: Request, res: Response) => {
-    console.log(JSON.stringify(req.body, null, 2));
-    const response = await buildImage(req.body);
-    if (response.error) {
-      res.status(500);
-    }
-    res.send(response);
+  const websocketServer = new WebSocket.Server({
+    noServer: true,
+    path: '/ws',
   });
 
-  app.post('/apply', async (req: Request, res: Response) => {
-    console.log(JSON.stringify(req.body, null, 2));
-    const response = await applyPulumi(req.body);
-    if (response.error) {
-      res.status(500);
-    }
-    console.log(JSON.stringify(response, null, 2));
-    res.send(response);
-  });
-
-  app.listen(server_port, () => {
+  const server = app.listen(server_port, () => {
     console.log(`Started server on port ${server_port}`);
   });
+
+  server.on('upgrade', (request, socket, head) => {
+    websocketServer.handleUpgrade(request, socket, head, (websocket) => {
+      websocketServer.emit('connection', websocket, request);
+    });
+  });
+
+  websocketServer.on('connection', (conn, _req) => {
+      conn.on('message', (message) => {
+        const ws_request: WSRequest = JSON.parse(message.toString());
+        // TODO: Better error handling of invalid commands
+        if (ws_request.command) {
+          if (ws_request.command === 'build') {
+            console.log(JSON.stringify(ws_request.request, null, 2));
+            buildImage(ws_request.request, conn);
+          } else if (ws_request.command === 'apply') {
+            console.log(JSON.stringify(ws_request.request, null, 2));
+            applyPulumi(ws_request.request, conn);
+          }
+        }
+      });
+    }
+  );
 }
 
 main();

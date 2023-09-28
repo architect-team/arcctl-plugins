@@ -1,28 +1,57 @@
-import { spawnSync } from 'child_process';
-import { ApplyInputs, BaseModule, BuildInputs, ImageDigest, PulumiStateString } from "./base.module";
+import { spawn } from 'child_process';
+import { ApplyInputs, BaseModule, BuildInputs } from "./base.module";
 import path from 'path';
+import WebSocket from "ws";
 
 export class PulumiModule extends BaseModule {
   // build an image that pulumi code can be run on
-  async build(inputs: BuildInputs): Promise<{ digest?: ImageDigest, error?: string }> {
-    const args = ['build', inputs.directory, '--quiet'];
-    console.log(`Building image with args: ${args.join('\n')}`);
-    const docker_result = spawnSync('docker', args, { cwd: inputs.directory });
+  build(inputs: BuildInputs, wsConn: WebSocket): void {
+    const args = ['build', inputs.directory];
+    console.log(`Building image with args: ${args.join(' ')}`);
+    const docker_result = spawn('docker', args, { cwd: inputs.directory });
 
-    let error;
-    if (docker_result.error) {
-      error = docker_result.error.message;
-    } else if (docker_result.stderr?.length) {
-      error = docker_result.stderr.toString();
-    } else if (docker_result.status === 255) {
-      error = `Error running Pulumi Docker container with the following args: ${args}`;
+    let image_digest = '';
+    const processChunk = (chunk: Buffer) => {
+      wsConn.send(JSON.stringify({
+        verboseOutput: chunk.toString()
+      }));
+
+      const chunk_str = chunk.toString('utf8')
+      const matches = chunk_str.match(/.*writing.*(sha256:\w+).*/);
+      if (matches && matches[1]) {
+        image_digest = matches[1];
+      }
     }
 
-    return { digest: docker_result.stdout?.toString().replace('sha256:', '').trim(), error };
+    const processError = () => {
+      wsConn.send(JSON.stringify({
+        error: 'Unknown Error'
+      }));
+    }
+
+    docker_result.stdout.on('data', processChunk);
+    docker_result.stderr.on('data', processChunk);
+
+    docker_result.stdout.on('error', processError);
+    docker_result.stderr.on('error', processError);
+
+    docker_result.on('close', (code) => {
+      if (code === 0 && image_digest !== '') {
+        wsConn.send(JSON.stringify({
+          result: {
+            image: image_digest
+          }
+        }));
+      } else {
+        wsConn.send(JSON.stringify({
+          error: `Exited with exit code: ${code}`
+        }));
+      }
+    });
   }
 
   // run pulumi image and apply provided pulumi
-  async apply(inputs: ApplyInputs): Promise<{ state?: PulumiStateString, outputs: Record<string, string>, error?: string }> {
+  apply(inputs: ApplyInputs, wsConn: WebSocket): void {
     // set variables as secrets for the pulumi stack
     let pulumi_config = '';
     if (!inputs.datacenterid) {
@@ -57,7 +86,7 @@ export class PulumiModule extends BaseModule {
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
     const pulumi_delimiter = '****PULUMI_DELIMITER****';
 
-    const args = [
+    const cmd_args = [
       'run',
       '--rm',
       '--entrypoint',
@@ -66,47 +95,71 @@ export class PulumiModule extends BaseModule {
       ...mount_directories,
       inputs.image,
       '-c',
-      `
-        ${state_write_cmd}
+      `${state_write_cmd}
         pulumi login --local &&
         pulumi stack init --stack ${inputs.datacenterid} &&
         ${state_import_cmd}
         pulumi refresh --stack ${inputs.datacenterid} --non-interactive --yes &&
         ${pulumi_config}
         pulumi ${apply_or_destroy} --stack ${inputs.datacenterid} --non-interactive --yes &&
-        echo "${pulumi_delimiter}" &&
+        echo ${pulumi_delimiter} &&
         pulumi stack export --stack ${inputs.datacenterid} &&
-        echo "${pulumi_delimiter}" &&
-        pulumi stack output --show-secrets -j
-      `
+        echo ${pulumi_delimiter} &&
+        pulumi stack output --show-secrets -j`
     ];
-    console.log(`Running pulumi with args: ${args.join('\n')}`);
-    console.log(JSON.stringify(inputs));
-    const docker_result = spawnSync('docker', args, {
-      stdio: 'inherit',
-    });
 
-    let error;
-    if (docker_result.error) {
-      error = docker_result.error.message;
-    } else if (docker_result.stdout && !docker_result.stdout.includes(pulumi_delimiter)) {
-      error = docker_result.stdout.toString();
-    } else if (docker_result.stderr?.length) {
-      error = docker_result.stderr.toString();
-    } else if (docker_result.status === 255) {
-      error = `Error running Pulumi Docker container with the following args: ${args}`;
-    }
+    console.log(`Inputs: ${JSON.stringify(inputs)}`);
 
-    const output_parts = docker_result.stdout?.toString().split(pulumi_delimiter);
-    let state;
-    if (output_parts?.length === 2) {
-      state = output_parts[1];
-    }
-    let outputs;
-    if (output_parts?.length === 3) {
-      outputs = JSON.parse(output_parts[2] || '{}');
-    }
+    let output = '';
 
-    return { state, outputs, error };
+    const processChunk = (chunk: Buffer) => {
+      const chunk_str = chunk.toString();
+      output += chunk_str;
+      wsConn.send(JSON.stringify({
+        verboseOutput: chunk_str
+      }));
+    };
+
+    const pulumiPromise = () => {
+      return new Promise((resolve, reject) => {
+        console.log(`Running with args: ${cmd_args.join(' ')}`);
+        const pulumi_result = spawn('docker', cmd_args, {
+          stdio: ['inherit'],
+        });
+
+        pulumi_result.stdout?.on('data', processChunk);
+        pulumi_result.stderr?.on('data', processChunk);
+        pulumi_result.on('exit', (code) => {
+          if (code !== 0) {
+            wsConn.send(JSON.stringify({
+              error: `${output}\nExited with exit code: ${code}`
+            }));
+            reject();
+          }
+          resolve(code);
+        });
+      });
+    };
+
+    // TODO: Handle rejected promise? Already send an error
+    pulumiPromise().then(() => {
+      // At this point, output contains all the docker command output we've sent
+      // back for verbose logging purposes
+      const output_parts = output.split(pulumi_delimiter);
+      let state = '';
+      let outputs = '{}';
+      if (output_parts.length >= 2) {
+        state = output_parts[1];
+      }
+      if (output_parts.length >= 3) {
+        outputs = JSON.parse(output_parts[2] || '{}');
+      }
+      wsConn.send(JSON.stringify({
+        result: {
+          state,
+          outputs,
+        }
+      }));
+    }).catch();
   }
 }

@@ -21,6 +21,21 @@ export class PulumiModule extends BaseModule {
     return { digest: docker_result.stdout?.toString().replace('sha256:', '').trim(), error };
   }
 
+  private convertToPath(key:string): string {
+    const parts = key.split(':');
+    let result = '';
+    for (const part of parts) {
+      if (result === '') {
+        result = part;
+      } else if (isNaN(part)) {
+        result += `.${part}`;
+      } else {
+        result += `[${part}]`;
+      }
+    }
+    return result;
+  }
+
   // run pulumi image and apply provided pulumi
   async apply(inputs: ApplyInputs): Promise<{ state?: PulumiStateString, outputs: Record<string, string>, error?: string }> {
     // set variables as secrets for the pulumi stack
@@ -46,10 +61,17 @@ export class PulumiModule extends BaseModule {
       }
 
       const config_pairs = literal_inputs.map(([key, value]) => {
+        const escaped_value = value.replace(/\"/g, "\\\"");
         if (key.includes(':')) {
-          return `--path --plaintext "${key.replace(':', '.')}"="${value}" --plaintext "${key}"="${value}"`;
+          const parts = key.split(':');
+          let path = '';
+          // if the path contains a number then we cannot pass it in using the : configuration syntax
+          if (parts.filter(part => !isNaN(part)).length === 0) {
+            path = ` --plaintext "${key}"="${escaped_value}"`;
+          }
+          return `--path --plaintext "${this.convertToPath(key)}"="${escaped_value}"${path}`;
         }
-        return `--plaintext ${key}="${value}"`;
+        return `--plaintext ${key}="${escaped_value}"`;
       }).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }

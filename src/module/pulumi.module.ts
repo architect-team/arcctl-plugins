@@ -1,20 +1,18 @@
 import { spawn } from 'child_process';
-import { ApplyInputs, BaseModule, BuildInputs } from "./base.module";
+import { ApplyInputs, BaseModule, BuildInputs, EventEmitter } from "./base.module";
 import path from 'path';
 import WebSocket from "ws";
 
 export class PulumiModule extends BaseModule {
   // build an image that pulumi code can be run on
-  build(inputs: BuildInputs, wsConn: WebSocket): void {
+  build(emitter: EventEmitter, inputs: BuildInputs): void {
     const args = ['build', inputs.directory];
     console.log(`Building image with args: ${args.join(' ')}`);
     const docker_result = spawn('docker', args, { cwd: inputs.directory });
 
     let image_digest = '';
     const processChunk = (chunk: Buffer) => {
-      wsConn.send(JSON.stringify({
-        verboseOutput: chunk.toString()
-      }));
+      emitter.log(chunk.toString());
 
       const chunk_str = chunk.toString('utf8')
       const matches = chunk_str.match(/.*writing.*(sha256:\w+).*/);
@@ -24,9 +22,8 @@ export class PulumiModule extends BaseModule {
     }
 
     const processError = () => {
-      wsConn.send(JSON.stringify({
-        error: 'Unknown Error'
-      }));
+      emitter.error('Unknown Error');
+      return;
     }
 
     docker_result.stdout.on('data', processChunk);
@@ -37,15 +34,9 @@ export class PulumiModule extends BaseModule {
 
     docker_result.on('close', (code) => {
       if (code === 0 && image_digest !== '') {
-        wsConn.send(JSON.stringify({
-          result: {
-            image: image_digest
-          }
-        }));
+        emitter.buildOutput(image_digest);
       } else {
-        wsConn.send(JSON.stringify({
-          error: `Exited with exit code: ${code}`
-        }));
+        emitter.error(`Exited with exit code: ${code}`);
       }
     });
   }
@@ -66,7 +57,7 @@ export class PulumiModule extends BaseModule {
   }
 
   // run pulumi image and apply provided pulumi
-  apply(inputs: ApplyInputs, wsConn: WebSocket): void {
+  apply(emitter: EventEmitter, inputs: ApplyInputs): void {
     // set variables as secrets for the pulumi stack
     let pulumi_config = '';
     if (!inputs.datacenterid) {
@@ -110,7 +101,7 @@ export class PulumiModule extends BaseModule {
 
     // set pulumi state to the state passed in, if it was supplied
     const state_file = 'pulumi-state.json';
-    const state_write_cmd = inputs.state ? `echo '${inputs.state}' > ${state_file}` : '';
+    const state_write_cmd = inputs.state ? `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : '';
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
     const pulumi_delimiter = '****PULUMI_DELIMITER****';
 
@@ -143,9 +134,7 @@ export class PulumiModule extends BaseModule {
     const processChunk = (chunk: Buffer) => {
       const chunk_str = chunk.toString();
       output += chunk_str;
-      wsConn.send(JSON.stringify({
-        verboseOutput: chunk_str
-      }));
+      emitter.log(chunk_str);
     };
 
     const pulumiPromise = () => {
@@ -159,9 +148,7 @@ export class PulumiModule extends BaseModule {
         pulumi_result.stderr?.on('data', processChunk);
         pulumi_result.on('exit', (code) => {
           if (code !== 0) {
-            wsConn.send(JSON.stringify({
-              error: `${output}\nExited with exit code: ${code}`
-            }));
+            emitter.error(`${output}\nExited with exit code: ${code}`);
             reject();
           }
           resolve(code);
@@ -175,19 +162,14 @@ export class PulumiModule extends BaseModule {
       // back for verbose logging purposes
       const output_parts = output.split(pulumi_delimiter);
       let state = '';
-      let outputs = '{}';
+      let outputs = {};
       if (output_parts.length >= 2) {
         state = output_parts[1];
       }
       if (output_parts.length >= 3) {
         outputs = JSON.parse(output_parts[2] || '{}');
       }
-      wsConn.send(JSON.stringify({
-        result: {
-          state,
-          outputs,
-        }
-      }));
+      emitter.applyOutput(state, outputs);
     }).catch();
   }
 }

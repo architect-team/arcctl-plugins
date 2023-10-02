@@ -40,13 +40,13 @@ export class PulumiPlugin extends BasePlugin {
     });
   }
 
-  private convertToPath(key:string): string {
+  private convertToPath(key: string): string {
     const parts = key.split(':');
     let result = '';
     for (const part of parts) {
       if (result === '') {
         result = part;
-      } else if (isNaN(part)) {
+      } else if (isNaN(Number(part))) {
         result += `.${part}`;
       } else {
         result += `[${part}]`;
@@ -85,7 +85,7 @@ export class PulumiPlugin extends BasePlugin {
           const parts = key.split(':');
           let path = '';
           // if the path contains a number then we cannot pass it in using the : configuration syntax
-          if (parts.filter(part => !isNaN(part)).length === 0) {
+          if (parts.filter(part => !isNaN(Number(part))).length === 0) {
             path = ` --plaintext "${key}"="${escaped_value}"`;
           }
           return `--path --plaintext "${this.convertToPath(key)}"="${escaped_value}"${path}`;

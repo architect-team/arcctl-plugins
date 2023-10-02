@@ -1,9 +1,8 @@
 import { spawn } from 'child_process';
-import { ApplyInputs, BaseModule, BuildInputs, EventEmitter } from "./base.module";
+import { ApplyInputs, BasePlugin, BuildInputs, EventEmitter } from "arcctl-plugin-core";
 import path from 'path';
-import WebSocket from "ws";
 
-export class PulumiModule extends BaseModule {
+export class PulumiPlugin extends BasePlugin {
   // build an image that pulumi code can be run on
   build(emitter: EventEmitter, inputs: BuildInputs): void {
     const args = ['build', inputs.directory];
@@ -107,7 +106,7 @@ export class PulumiModule extends BaseModule {
 
     const cmd_args = [
       'run',
-      //'--rm',
+      '--rm',
       '--entrypoint',
       'bash',
       ...environment,

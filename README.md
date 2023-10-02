@@ -1,5 +1,6 @@
-# pulumi-docker-test
+# Arcctl Module Plugins
 
+<!--
 ## Building the image
 
 ```sh
@@ -72,3 +73,4 @@ repo. Then to the right of the URL, select either the "Build" or "Apply" method.
   "destroy": true
 }
 ```
+-->

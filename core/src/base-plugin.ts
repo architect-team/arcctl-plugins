@@ -28,7 +28,7 @@ type ApplyRequest = {
   destroy: boolean;
 }
 
-export type WSRequest = {
+type WSRequest = {
   command: 'build';
   request: BuildRequest;
 } | {
@@ -93,7 +93,7 @@ export class EventEmitter {
   }
 }
 
-export abstract class BaseModule {
+export abstract class BasePlugin {
   abstract build(emitter: EventEmitter, inputs: BuildInputs): void;
   abstract apply(emitter: EventEmitter, inputs: ApplyInputs): void;
 

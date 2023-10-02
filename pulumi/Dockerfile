@@ -11,7 +11,9 @@ RUN wget https://get.pulumi.com/releases/sdk/pulumi-v3.78.1-linux-x64.tar.gz && 
   cp /tmp/pulumi/pulumi/* /app/.pulumi/bin/
 ENV PATH=$PATH:/app/.pulumi/bin/
 
-COPY . .
+# TODO: When core is published to npm, don't need to copy this way and use build context ".."
+COPY core/ /core
+COPY pulumi/ .
 
 RUN npm ci
 

@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BasePlugin = exports.EventEmitter = void 0;
+const child_process_1 = require("child_process");
 const express_1 = __importDefault(require("express"));
 const ws_1 = __importDefault(require("ws"));
 ;
@@ -60,6 +61,40 @@ class EventEmitter {
 }
 exports.EventEmitter = EventEmitter;
 class BasePlugin {
+    /**
+     * This method may be overridden, but for most use cases is as simple as
+     * running `docker build` on the given directory and returning the results
+     * via `emitter.buildOutput()`.
+     */
+    build(emitter, inputs) {
+        const args = ['build', inputs.directory];
+        const docker_result = (0, child_process_1.spawn)('docker', args, { cwd: inputs.directory });
+        let image_digest = '';
+        const processChunk = (chunk) => {
+            emitter.log(chunk.toString());
+            const chunk_str = chunk.toString('utf8');
+            const matches = chunk_str.match(/.*writing.*(sha256:\w+).*/);
+            if (matches && matches[1]) {
+                image_digest = matches[1];
+            }
+        };
+        const processError = () => {
+            emitter.error('Unknown Error');
+            return;
+        };
+        docker_result.stdout.on('data', processChunk);
+        docker_result.stderr.on('data', processChunk);
+        docker_result.stdout.on('error', processError);
+        docker_result.stderr.on('error', processError);
+        docker_result.on('close', (code) => {
+            if (code === 0 && image_digest !== '') {
+                emitter.buildOutput(image_digest);
+            }
+            else {
+                emitter.error(`Exited with exit code: ${code}`);
+            }
+        });
+    }
     /**
      * Run this module. This method creates an express application
      * and configures the WebSocket server with path `/ws` to handle

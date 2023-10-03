@@ -73,4 +73,17 @@ repo. Then to the right of the URL, select either the "Build" or "Apply" method.
   "destroy": true
 }
 ```
+
+docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v /Users/tyler/code/architect/module-plugin/test/tofu-modules/vpc:/Users/tyler/code/architect/module-plugin/test/tofu-modules/vpc opentofu sh -c "npm run start"
+
+
+{
+    "command": "build",
+    "request": {"directory": "/Users/tyler/code/architect/module-plugin/test/tofu-modules/vpc"}
+}
+
+{
+    "command": "apply",
+    "request": {"image": "4a69e4300fa041de5744a44f6eecbc0e3e3e3d30ba352631c08341f872cedb60"}
+}
 -->

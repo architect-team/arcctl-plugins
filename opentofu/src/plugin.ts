@@ -1,19 +1,25 @@
 import { spawn } from 'child_process';
-import { ApplyInputs, BasePlugin, BuildInputs, EventEmitter } from "arcctl-plugin-core";
+import { ApplyInputs, BasePlugin, EventEmitter } from "arcctl-plugin-core";
 import path from 'path';
 
 export class OpenTofuPlugin extends BasePlugin {
   apply(emitter: EventEmitter, inputs: ApplyInputs): void {
 
+    let apply_vars = [];
     const mount_directories: string[] = [];
     if ((inputs.inputs || []).length) {
       for (const [key, value] of inputs.inputs) {
+        let var_value = value;
         if (value.startsWith('file:')) {
           const value_without_delimiter = value.replace('file:', '');
           const file_directory = path.parse(value_without_delimiter);
           mount_directories.push('-v');
           mount_directories.push(`${file_directory.dir}:${file_directory.dir}`);
+
+          var_value = value.replace('file:', '');
         }
+
+        apply_vars.push(`-var="${key}=${var_value}"`);
       }
     }
 
@@ -34,7 +40,7 @@ export class OpenTofuPlugin extends BasePlugin {
       `
       ${state_write_cmd} &&
       terraform init &&
-      terraform plan -input=false -out=tfplan ${maybe_destroy} &&
+      terraform plan -input=false -out=tfplan ${maybe_destroy} ${apply_vars.join(' ')}  &&
       terraform apply ${maybe_destroy} tfplan &&
       echo "${output_delimiter}" &&
       cat ${state_file}
@@ -76,12 +82,16 @@ export class OpenTofuPlugin extends BasePlugin {
       // back for verbose logging purposes
       const output_parts = output.split(output_delimiter);
       let state = '';
-      let outputs = {};
+      let outputs: Record<string, string> = {};
       if (output_parts.length >= 2) {
         state = output_parts[1];
       }
       if (output_parts.length >= 3) {
-        outputs = JSON.parse(output_parts[2] || '{}');
+        const raw_outputs: Record<string, Record<string, string>> = JSON.parse(output_parts[2] || '{}');
+        for (const [key, value] of Object.entries(raw_outputs)) {
+          // TF outputs values as {"id": {"value": "..."}} and we need to flatten to {"id": "..."}
+          outputs[key] = value['value'];
+        }
       }
       emitter.applyOutput(state, outputs);
     }).catch();

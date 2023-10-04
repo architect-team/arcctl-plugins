@@ -1,5 +1,7 @@
 import { spawn } from "child_process";
 import express from "express";
+import { existsSync } from "fs";
+import path from "path";
 import WebSocket from "ws";
 
 
@@ -36,6 +38,12 @@ type WSRequest = {
   command: 'apply';
   request: ApplyRequest;
 };
+
+/**
+ * Name of a default dockerfile to use when building a module. If this file is not present,
+ * a Dockerfile must already exist within the inputs.cwd, otherwise the build will fail.
+ */
+const DEFAULT_DOCKERFILE = 'ModuleDefault.dockerfile';
 
 /**
  * Handles emitting events (like logs and results) via the websocket connection
@@ -109,6 +117,16 @@ export abstract class BasePlugin {
    */
   build(emitter: EventEmitter, inputs: BuildInputs): void {
     const args = ['build', inputs.directory];
+
+    if (!existsSync(path.join(inputs.directory, 'Dockerfile'))) {
+      if (existsSync(DEFAULT_DOCKERFILE)) {
+        args.push('-f', path.resolve(DEFAULT_DOCKERFILE));
+      } else {
+        emitter.error('No Dockerfile found in this module, and no default Dockerfile exists for this plugin.');
+        return;
+      }
+    }
+
     const docker_result = spawn('docker', args, { cwd: inputs.directory });
 
     let image_digest = '';

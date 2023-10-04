@@ -33,9 +33,7 @@ export class PulumiPlugin extends BasePlugin {
         if (value.startsWith('file:')) {
           const value_without_delimiter = value.replace('file:', '');
           const file_directory = path.parse(value_without_delimiter);
-          mount_directories.push('-v');
-          mount_directories.push(`${file_directory.dir}:${file_directory.dir}`);
-
+          mount_directories.push('-v', `${file_directory.dir}:${file_directory.dir}`);
           literal_inputs.push([key, value.replace('file:', '')])
         } else {
           literal_inputs.push([key, value]);

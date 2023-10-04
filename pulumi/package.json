@@ -1,8 +1,8 @@
 {
-  "name": "arcctl-plugin-pulumi",
+  "name": "arcctl-pulumi-plugin",
   "main": "src/index.js",
   "scripts": {
-    "build": "docker build .. -t pulumi -f Dockerfile",
+    "build": "docker build .. -t arcctl-pulumi-plugin -f Dockerfile",
     "start": "ts-node --transpileOnly ./src/index.ts"
   },
   "dependencies": {

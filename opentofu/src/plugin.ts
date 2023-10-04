@@ -38,13 +38,13 @@ export class OpenTofuPlugin extends BasePlugin {
       '-c',
       `
       ${state_write_cmd} &&
-      terraform init &&
-      terraform plan -input=false -out=tfplan ${maybe_destroy} ${apply_vars.join(' ')}  &&
-      terraform apply ${maybe_destroy} tfplan &&
+      tofu init &&
+      tofu plan -input=false -out=tfplan ${maybe_destroy} ${apply_vars.join(' ')}  &&
+      tofu apply ${maybe_destroy} tfplan &&
       echo "${output_delimiter}" &&
       cat ${state_file}
       echo "${output_delimiter}" &&
-      terraform output -json`
+      tofu output -json`
     ];
 
 

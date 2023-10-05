@@ -28,6 +28,8 @@ export class OpenTofuPlugin extends BasePlugin {
 
     const output_delimiter = '****OUTPUT_DELIMITER****';
 
+    // Note: `tofu plan -detailed-exitcode` is required for `tofu plan` to return a non-zero exit code
+    // when the plan fails (e.g. a user has erroneous tf), however it makes exit code 2 mean the plan worked but there are changes.
     const cmd_args = [
       'run',
       '--rm',
@@ -39,10 +41,10 @@ export class OpenTofuPlugin extends BasePlugin {
       `
       ${state_write_cmd} &&
       tofu init &&
-      tofu plan -input=false -out=tfplan ${maybe_destroy} ${apply_vars.join(' ')}  &&
+      tofu plan -input=false -out=tfplan -detailed-exitcode ${maybe_destroy} ${apply_vars.join(' ')}; if [ $? -eq 1 ]; then false; else true; fi &&
       tofu apply ${maybe_destroy} tfplan &&
       echo "${output_delimiter}" &&
-      cat ${state_file}
+      cat ${state_file} &&
       echo "${output_delimiter}" &&
       tofu output -json`
     ];

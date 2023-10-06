@@ -1,4 +1,7 @@
+import { spawn } from "child_process";
 import express from "express";
+import { existsSync } from "fs";
+import path from "path";
 import WebSocket from "ws";
 
 
@@ -35,6 +38,12 @@ type WSRequest = {
   command: 'apply';
   request: ApplyRequest;
 };
+
+/**
+ * Name of a default dockerfile to use when building a module. If this file is not present,
+ * a Dockerfile must already exist within the inputs.cwd, otherwise the build will fail.
+ */
+const DEFAULT_DOCKERFILE = 'ModuleDefault.dockerfile';
 
 /**
  * Handles emitting events (like logs and results) via the websocket connection
@@ -94,8 +103,62 @@ export class EventEmitter {
 }
 
 export abstract class BasePlugin {
-  abstract build(emitter: EventEmitter, inputs: BuildInputs): void;
+  /**
+   * This method must be overridden, the apply process is different for every
+   * plugin type. This method is expected to call `emitter.applyOutput()` with
+   * the state and outputs of the apply.
+   */
   abstract apply(emitter: EventEmitter, inputs: ApplyInputs): void;
+
+  /**
+   * This method may be overridden, but for most use cases is as simple as
+   * running `docker build` on the given directory and returning the results
+   * via `emitter.buildOutput()`.
+   */
+  build(emitter: EventEmitter, inputs: BuildInputs): void {
+    const args = ['build', inputs.directory];
+
+    if (!existsSync(path.join(inputs.directory, 'Dockerfile'))) {
+      if (existsSync(DEFAULT_DOCKERFILE)) {
+        args.push('-f', path.resolve(DEFAULT_DOCKERFILE));
+      } else {
+        emitter.error('No Dockerfile found in this module, and no default Dockerfile exists for this plugin.');
+        return;
+      }
+    }
+
+    const docker_result = spawn('docker', args, { cwd: inputs.directory });
+
+    let image_digest = '';
+    const processChunk = (chunk: Buffer) => {
+      emitter.log(chunk.toString());
+
+      const chunk_str = chunk.toString('utf8')
+      const matches = chunk_str.match(/.*writing.*(sha256:\w+).*/);
+      if (matches && matches[1]) {
+        image_digest = matches[1];
+      }
+    }
+
+    const processError = () => {
+      emitter.error('Unknown Error');
+      return;
+    }
+
+    docker_result.stdout.on('data', processChunk);
+    docker_result.stderr.on('data', processChunk);
+
+    docker_result.stdout.on('error', processError);
+    docker_result.stderr.on('error', processError);
+
+    docker_result.on('close', (code) => {
+      if (code === 0 && image_digest !== '') {
+        emitter.buildOutput(image_digest);
+      } else {
+        emitter.error(`Exited with exit code: ${code}`);
+      }
+    });
+  }
 
   /**
    * Run this module. This method creates an express application

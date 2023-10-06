@@ -1,0 +1,16 @@
+{
+    "name": "arcctl-opentofu-plugin",
+    "main": "src/index.js",
+    "scripts": {
+        "build": "docker build .. -t arcctl-opentofu-plugin -f Dockerfile",
+        "start": "ts-node --transpileOnly ./src/index.ts"
+    },
+    "dependencies": {
+        "arcctl-plugin-core": "file:../core"
+    },
+    "devDependencies": {
+        "@types/node": "^20.8.0",
+        "ts-node": "^10.9.1",
+        "typescript": "^5.1.6"
+    }
+}

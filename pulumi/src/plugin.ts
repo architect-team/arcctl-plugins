@@ -3,43 +3,6 @@ import { ApplyInputs, BasePlugin, BuildInputs, EventEmitter } from "arcctl-plugi
 import path from 'path';
 
 export class PulumiPlugin extends BasePlugin {
-  // build an image that pulumi code can be run on
-  build(emitter: EventEmitter, inputs: BuildInputs): void {
-    const args = ['build', inputs.directory];
-    console.log(`Building image with args: ${args.join(' ')}`);
-    const docker_result = spawn('docker', args, { cwd: inputs.directory });
-
-    let image_digest = '';
-    const processChunk = (chunk: Buffer) => {
-      emitter.log(chunk.toString());
-
-      const chunk_str = chunk.toString('utf8')
-      const matches = chunk_str.match(/.*writing.*(sha256:\w+).*/);
-      if (matches && matches[1]) {
-        image_digest = matches[1];
-      }
-    }
-
-    const processError = () => {
-      emitter.error('Unknown Error');
-      return;
-    }
-
-    docker_result.stdout.on('data', processChunk);
-    docker_result.stderr.on('data', processChunk);
-
-    docker_result.stdout.on('error', processError);
-    docker_result.stderr.on('error', processError);
-
-    docker_result.on('close', (code) => {
-      if (code === 0 && image_digest !== '') {
-        emitter.buildOutput(image_digest);
-      } else {
-        emitter.error(`Exited with exit code: ${code}`);
-      }
-    });
-  }
-
   private convertToPath(key: string): string {
     const parts = key.split(':');
     let result = '';
@@ -70,9 +33,7 @@ export class PulumiPlugin extends BasePlugin {
         if (value.startsWith('file:')) {
           const value_without_delimiter = value.replace('file:', '');
           const file_directory = path.parse(value_without_delimiter);
-          mount_directories.push('-v');
-          mount_directories.push(`${file_directory.dir}:${file_directory.dir}`);
-
+          mount_directories.push('-v', `${file_directory.dir}:${file_directory.dir}`);
           literal_inputs.push([key, value.replace('file:', '')])
         } else {
           literal_inputs.push([key, value]);
@@ -102,7 +63,7 @@ export class PulumiPlugin extends BasePlugin {
     const state_file = 'pulumi-state.json';
     const state_write_cmd = inputs.state ? `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : '';
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
-    const pulumi_delimiter = '****PULUMI_DELIMITER****';
+    const output_delimiter = '****OUTPUT_DELIMITER****';
 
     const cmd_args = [
       'run',
@@ -120,9 +81,9 @@ export class PulumiPlugin extends BasePlugin {
         pulumi refresh --stack ${inputs.datacenterid} --non-interactive --yes &&
         ${pulumi_config}
         pulumi ${apply_or_destroy} --stack ${inputs.datacenterid} --non-interactive --yes &&
-        echo ${pulumi_delimiter} &&
+        echo "${output_delimiter}" &&
         pulumi stack export --stack ${inputs.datacenterid} &&
-        echo ${pulumi_delimiter} &&
+        echo "${output_delimiter}" &&
         pulumi stack output --show-secrets -j`
     ];
 
@@ -133,7 +94,7 @@ export class PulumiPlugin extends BasePlugin {
     const processChunk = (chunk: Buffer) => {
       const chunk_str = chunk.toString();
       output += chunk_str;
-      emitter.log(chunk_str);
+      emitter.log(chunk_str.replace(output_delimiter, ''));
     };
 
     const pulumiPromise = () => {
@@ -155,11 +116,10 @@ export class PulumiPlugin extends BasePlugin {
       });
     };
 
-    // TODO: Handle rejected promise? Already send an error
     pulumiPromise().then(() => {
       // At this point, output contains all the docker command output we've sent
       // back for verbose logging purposes
-      const output_parts = output.split(pulumi_delimiter);
+      const output_parts = output.split(output_delimiter);
       let state = '';
       let outputs = {};
       if (output_parts.length >= 2) {

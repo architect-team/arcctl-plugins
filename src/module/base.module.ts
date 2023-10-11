@@ -6,7 +6,7 @@ export interface BuildInputs {
 
 export interface ApplyInputs {
   datacenterid: string;
-  state?: object;
+  state?: string;
   inputs: [string, string][];
   image: string; // digest
   destroy?: boolean;

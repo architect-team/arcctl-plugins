@@ -66,7 +66,7 @@ repo. Then to the right of the URL, select either the "Build" or "Apply" method.
     "aws:secretKey": "<your AWS secret key>",
     "world_text": "Architect"
   },
-  "pulumistate": {
+  "state": {
     ...
   },
   "destroy": true

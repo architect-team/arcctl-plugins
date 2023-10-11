@@ -26,7 +26,7 @@ type ApplyRequest = {
   datacenterid: string;
   image: string;
   inputs: [string, string][];
-  pulumistate: string;
+  state: string;
   destroy: boolean;
 }
 
@@ -36,7 +36,7 @@ const applyPulumi = (request: ApplyRequest, wsConn: WebSocket): void => {
     datacenterid: request.datacenterid,
     image: request.image,
     inputs: request.inputs,
-    state: request.pulumistate ? JSON.parse(request.pulumistate) : undefined,
+    state: request.state,
     destroy: request.destroy,
   }, wsConn);
 

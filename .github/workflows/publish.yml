@@ -22,3 +22,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: architectio/pulumi-plugin:${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
+
+          

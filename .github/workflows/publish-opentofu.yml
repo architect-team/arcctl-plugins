@@ -1,0 +1,25 @@
+on:
+  push:
+    paths:
+      - opentofu/**
+
+jobs:
+  push_main_to_registry:
+    if: github.ref_name == 'main' || startsWith(github.ref_name, 'arc-')
+    name: Push Docker image to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: .
+          file: ./opentofu/Dockerfile
+          push: true
+          tags: architectio/opentofu-plugin:${{ github.ref_name == 'main' && 'latest' || github.ref_name }}

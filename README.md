@@ -1,74 +1,51 @@
-# pulumi-docker-test
+# Arcctl Module Plugins
 
-## Building the image
 
+## Build the plugin
+
+Navigate to the plugin you want to use and use `npm run build` to create the necessary plugin image.
 ```sh
-docker build . -t pulumi
+cd ./pulumi/
+npm install
+npm run build
 ```
 
-## Running the container in dev mode
+## Testing the plugin
 
-Includes hot reloading. Note that the paths of the second volume will need to be
-changed.
+The plugin container can be run locally to test the `build` and `apply` functions. `IMAGE_NAME` will be either `pulumi` or `opentofu` depending on which plugin was built.
 
-```sh
-docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v ./src:/app/src -v /home/ryan/Code/arcctl-build-modules/test/yaml:/home/ryan/Code/arcctl-build-modules/test/yaml pulumi sh -c "npm run dev"
-```
+It's necessary to mount the path to the module you want to test, e.g. `/Users/you/module-plugin/test/tofu-modules/vpc`.
 
-## Running the container in prod mode
-
-Note that the path of the second volume will need to be changed.
+Rebuild the image with `npm run build` when making changes to test any modifications.
 
 ```sh
-docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v /home/ryan/Code/arcctl-build-modules/test/yaml:/home/ryan/Code/arcctl-build-modules/test/yaml pulumi sh -c "npm run start"
+docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v /path/to/test/module:/path/to/test/module [IMAGE_NAME] sh -c "npm run dev"
 ```
 
-## Running Postman requests against the container
+### Running test requests
 
-Make sure that the container has started and prints out something like
-`Started server on port 50051`. In Postman, create a new gRPC request and set
-the URL to `0.0.0.0:50051`. On the "Service definition" tab, select "Import a
-.proto file" and select `arcctlpulumi.proto` from the `proto` folder of this
-repo. Then to the right of the URL, select either the "Build" or "Apply" method.
+Once the server is running, the `/ws` endpoint can be used to send requests to the plugin. The default port used is `50051`, so the test URL will be something like: `0.0.0.0:50051/ws`. Websocket requests can be tested using [Postman](https://www.postman.com/) or any other tool you're comfortable with.
 
-### Sample build request message
+#### Sample build request message
 
+The build command is used to build a module with the plugin. This request takes the directory where the module is found, and will output the resulting image hash.
 ```json
 {
-  "directory": "/home/ryan/Code/arcctl-build-modules/test/typescript"
-}
-```
-
-### Sample apply request message (pulumi up)
-
-```json
-{
-  "datacenterid": "datacenter-id",
-  "image": "1a036239d7feee5b44e23e99458120823fe70c3aea474ab2bd95f7f7216626e7",
-  "inputs": {
-    "aws:region": "<your preferred AWS region>",
-    "aws:accessKey": "<your AWS access key>",
-    "aws:secretKey": "<your AWS secret key>",
-    "world_text": "Architect"
+  "command": "build",
+  "request": {
+    "directory": "/path/to/test/module"
   }
 }
 ```
 
-### Sample apply request message (pulumi destroy)
+#### Sample apply request message
 
+The apply command is used to execute the module, using any existing state and inputs passed through. A simple request where there is no prior state and no inputs would look like:
 ```json
 {
-  "datacenterid": "datacenter-id",
-  "image": "1a036239d7feee5b44e23e99458120823fe70c3aea474ab2bd95f7f7216626e7",
-  "inputs": {
-    "aws:region": "<your preferred AWS region>",
-    "aws:accessKey": "<your AWS access key>",
-    "aws:secretKey": "<your AWS secret key>",
-    "world_text": "Architect"
-  },
-  "state": {
-    ...
-  },
-  "destroy": true
+  "command": "apply",
+  "request": {
+    "image": "2dad474b9d67d2e699fa6436a5fd133246460f044e3b6b9cf3fd8d392ec21269"
+  }
 }
 ```

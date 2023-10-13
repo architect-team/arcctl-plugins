@@ -1,9 +1,10 @@
 import { describe, it } from "mocha";
-import { PulumiModule } from "../../src/module/pulumi.module";
+import { PulumiPlugin } from "../../src/plugin";
 import { WebSocket } from "ws";
 import sinon, { SinonStub, spy } from "sinon";
 import child_process, { ChildProcess } from 'child_process';
 import { expect } from "chai";
+import { EventEmitter } from "arcctl-plugin-core";
 
 describe('build commands', () => {
   let spawn_stub: SinonStub;
@@ -13,7 +14,7 @@ describe('build commands', () => {
     on: spy()
   };
   const mock_websocket_connection = { send: spy() };
-  const pulumi_module = new PulumiModule();
+  const pulumi_plugin = new PulumiPlugin();
 
   beforeEach(() => {
     spawn_stub = sinon.stub(child_process, 'spawn').callsFake(() => mock_spawn_process as unknown as ChildProcess);
@@ -23,9 +24,11 @@ describe('build commands', () => {
     sinon.restore();
   });
 
-  it('runs a docker build command', () => {
+  it('runs a docker build command', async () => {
     const directory = '/home/test-user/pulumi-typescript-module/';
-    pulumi_module.build({ directory }, mock_websocket_connection as unknown as WebSocket);
+    const event_emitter = new EventEmitter(mock_websocket_connection as unknown as WebSocket);
+
+    await pulumi_plugin.build(event_emitter, { directory });
 
     const docker_command_args = spawn_stub.firstCall.args;
     const docker_build_args = docker_command_args[1];

@@ -1,57 +1,10 @@
 import { spawn } from 'child_process';
-import { ApplyInputs, BaseModule, BuildInputs } from "./base.module";
+import { ApplyInputs, BasePlugin, EventEmitter } from "arcctl-plugin-core";
 import path from 'path';
-import WebSocket from "ws";
 
-export class PulumiModule extends BaseModule {
-  // build an image that pulumi code can be run on
-  build(inputs: BuildInputs, wsConn: WebSocket): void {
-    const args = ['build', inputs.directory];
-    console.log(`Building image with args: ${args.join(' ')}`);
-    const docker_result = spawn('docker', args, { cwd: inputs.directory });
-
-    let image_digest = '';
-    const processChunk = (chunk: Buffer) => {
-      wsConn.send(JSON.stringify({
-        verboseOutput: chunk.toString()
-      }));
-
-      const chunk_str = chunk.toString('utf8')
-      const matches = chunk_str.match(/.*writing.*(sha256:\w+).*/);
-      if (matches && matches[1]) {
-        image_digest = matches[1];
-      }
-    }
-
-    const processError = () => {
-      wsConn.send(JSON.stringify({
-        error: 'Unknown Error'
-      }));
-    }
-
-    docker_result.stdout.on('data', processChunk);
-    docker_result.stderr.on('data', processChunk);
-
-    docker_result.stdout.on('error', processError);
-    docker_result.stderr.on('error', processError);
-
-    docker_result.on('close', (code) => {
-      if (code === 0 && image_digest !== '') {
-        wsConn.send(JSON.stringify({
-          result: {
-            image: image_digest
-          }
-        }));
-      } else {
-        wsConn.send(JSON.stringify({
-          error: `Exited with exit code: ${code}`
-        }));
-      }
-    });
-  }
-
+export class PulumiPlugin extends BasePlugin {
   // run pulumi image and apply provided pulumi
-  apply(inputs: ApplyInputs, wsConn: WebSocket): void {
+  apply(emitter: EventEmitter, inputs: ApplyInputs): void {
     // set variables as secrets for the pulumi stack
     let pulumi_config = '';
     if (!inputs.datacenterid) {
@@ -65,9 +18,7 @@ export class PulumiModule extends BaseModule {
         if (value.startsWith('file:')) {
           const value_without_delimiter = value.replace('file:', '');
           const file_directory = path.parse(value_without_delimiter);
-          mount_directories.push('-v');
-          mount_directories.push(`${file_directory.dir}:${file_directory.dir}`);
-
+          mount_directories.push('-v', `${file_directory.dir}:${file_directory.dir}`);
           literal_inputs.push([key, value.replace('file:', '')])
         } else {
           literal_inputs.push([key, value]);
@@ -86,13 +37,13 @@ export class PulumiModule extends BaseModule {
 
     // set pulumi state to the state passed in, if it was supplied
     const state_file = 'pulumi-state.json';
-    const state_write_cmd = inputs.state ? `echo '${inputs.state}' > ${state_file}` : '';
+    const state_write_cmd = inputs.state ? `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : '';
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
-    const pulumi_delimiter = '****PULUMI_DELIMITER****';
+    const output_delimiter = '****OUTPUT_DELIMITER****';
 
     const cmd_args = [
       'run',
-      //'--rm',
+      '--rm',
       '--entrypoint',
       'bash',
       ...environment,
@@ -106,9 +57,9 @@ export class PulumiModule extends BaseModule {
         pulumi refresh --stack ${inputs.datacenterid} --non-interactive --yes &&
         ${pulumi_config}
         pulumi ${apply_or_destroy} --stack ${inputs.datacenterid} --non-interactive --yes &&
-        echo ${pulumi_delimiter} &&
+        echo "${output_delimiter}" &&
         pulumi stack export --stack ${inputs.datacenterid} &&
-        echo ${pulumi_delimiter} &&
+        echo "${output_delimiter}" &&
         pulumi stack output --show-secrets -j`
     ];
 
@@ -119,9 +70,7 @@ export class PulumiModule extends BaseModule {
     const processChunk = (chunk: Buffer) => {
       const chunk_str = chunk.toString();
       output += chunk_str;
-      wsConn.send(JSON.stringify({
-        verboseOutput: chunk_str
-      }));
+      emitter.log(chunk_str.replace(output_delimiter, ''));
     };
 
     const pulumiPromise = () => {
@@ -135,35 +84,27 @@ export class PulumiModule extends BaseModule {
         pulumi_result.stderr?.on('data', processChunk);
         pulumi_result.on('exit', (code) => {
           if (code !== 0) {
-            wsConn.send(JSON.stringify({
-              error: `${output}\nExited with exit code: ${code}`
-            }));
-            return reject(); 
+            emitter.error(`${output}\nExited with exit code: ${code}`);
+            return reject();
           }
           resolve(code);
         });
       });
     };
 
-    // TODO: Handle rejected promise? Already send an error
     pulumiPromise().then(() => {
       // At this point, output contains all the docker command output we've sent
       // back for verbose logging purposes
-      const output_parts = output.split(pulumi_delimiter);
+      const output_parts = output.split(output_delimiter);
       let state = '';
-      let outputs = '{}';
+      let outputs = {};
       if (output_parts.length >= 2) {
         state = output_parts[1];
       }
       if (output_parts.length >= 3) {
         outputs = JSON.parse(output_parts[2] || '{}');
       }
-      wsConn.send(JSON.stringify({
-        result: {
-          state,
-          outputs,
-        }
-      }));
+      emitter.applyOutput(state, outputs);
     }).catch();
   }
 }

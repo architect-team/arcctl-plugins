@@ -1,3 +1,2 @@
-export { BasePlugin } from "./base-plugin";
-
-export type { EventEmitter, BuildInputs, ApplyInputs } from "./base-plugin";
+export { BasePlugin, EventEmitter } from "./base-plugin";
+export type { BuildInputs, ApplyInputs } from "./base-plugin";

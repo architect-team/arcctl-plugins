@@ -4,7 +4,6 @@ import { existsSync } from "fs";
 import path from "path";
 import WebSocket from "ws";
 
-
 type BuildRequest = {
   directory: string;
 };
@@ -13,15 +12,13 @@ export interface BuildInputs {
   directory: string;
 };
 
-
 export interface ApplyInputs {
   datacenterid: string;
-  state?: object;
+  state?: string;
   inputs: [string, string][];
   image: string;
   destroy?: boolean;
 };
-
 
 type ApplyRequest = {
   datacenterid: string;
@@ -204,7 +201,7 @@ export abstract class BasePlugin {
                 datacenterid: request.datacenterid,
                 image: request.image,
                 inputs: request.inputs,
-                state: request.state ? JSON.parse(request.state) : undefined,
+                state: request.state,
                 destroy: request.destroy,
               });
             } else {

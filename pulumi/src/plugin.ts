@@ -1,23 +1,8 @@
 import { spawn } from 'child_process';
-import { ApplyInputs, BasePlugin, BuildInputs, EventEmitter } from "arcctl-plugin-core";
+import { ApplyInputs, BasePlugin, EventEmitter } from "arcctl-plugin-core";
 import path from 'path';
 
 export class PulumiPlugin extends BasePlugin {
-  private convertToPath(key: string): string {
-    const parts = key.split(':');
-    let result = '';
-    for (const part of parts) {
-      if (result === '') {
-        result = part;
-      } else if (isNaN(Number(part))) {
-        result += `.${part}`;
-      } else {
-        result += `[${part}]`;
-      }
-    }
-    return result;
-  }
-
   // run pulumi image and apply provided pulumi
   apply(emitter: EventEmitter, inputs: ApplyInputs): void {
     // set variables as secrets for the pulumi stack
@@ -42,15 +27,6 @@ export class PulumiPlugin extends BasePlugin {
 
       const config_pairs = literal_inputs.map(([key, value]) => {
         const escaped_value = value.replace(/\"/g, "\\\"");
-        if (key.includes(':')) {
-          const parts = key.split(':');
-          let path = '';
-          // if the path contains a number then we cannot pass it in using the : configuration syntax
-          if (parts.filter(part => !isNaN(Number(part))).length === 0) {
-            path = ` --plaintext "${key}"="${escaped_value}"`;
-          }
-          return `--path --plaintext "${this.convertToPath(key)}"="${escaped_value}"${path}`;
-        }
         return `--plaintext ${key}="${escaped_value}"`;
       }).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
@@ -109,7 +85,7 @@ export class PulumiPlugin extends BasePlugin {
         pulumi_result.on('exit', (code) => {
           if (code !== 0) {
             emitter.error(`${output}\nExited with exit code: ${code}`);
-            reject();
+            return reject();
           }
           resolve(code);
         });

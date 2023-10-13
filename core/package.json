@@ -4,8 +4,7 @@
   "author": "Architect.io",
   "license": "MIT",
   "scripts": {
-    "build": "rm -rf ./lib && tsc -b",
-    "start": "ts-node --transpileOnly ./src/index.ts"
+    "build": "rm -rf ./lib && tsc -b"
   },
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",

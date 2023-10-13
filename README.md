@@ -12,7 +12,7 @@ npm run build
 
 ## Testing the plugin
 
-The plugin container can be run locally to test the `build` and `apply` functions. `IMAGE_NAME` will be either `pulumi` or `opentofu` depending on which plugin was built.
+The plugin container can be run locally to test the `build` and `apply` functions. `IMAGE_NAME` will be either `arcctl-pulumi-plugin` or `arcctl-opentofu-plugin` depending on which plugin(s) have been built.
 
 It's necessary to mount the path to the module you want to test, e.g. `/Users/you/module-plugin/test/tofu-modules/vpc`.
 
@@ -20,6 +20,12 @@ Rebuild the image with `npm run build` when making changes to test any modificat
 
 ```sh
 docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v /path/to/test/module:/path/to/test/module [IMAGE_NAME] sh -c "npm run dev"
+```
+
+Or in order to test without rebuilding the plugin's image, run a version of the following, where the `src` directories of the core and one of the specific plugins are mounted. Be sure to run this from the root of the repo. Changes will hot-reload using nodemon.
+
+```sh
+docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v ./pulumi:/app -v ./core:/core -v /home/ryan/Code/gcp-pulumi-modules:/home/ryan/Code/gcp-pulumi-modules arcctl-pulumi-plugin sh -c "npm run dev"
 ```
 
 ### Running test requests

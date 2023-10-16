@@ -13,6 +13,8 @@ ENV PATH=$PATH:/app/.pulumi/bin/
 
 # TODO: When core is published to npm, don't need to copy this way and use build context ".."
 COPY core/ /core
+RUN cd /core && npm run build && cd /app
+
 COPY pulumi/ .
 
 RUN npm ci

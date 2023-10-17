@@ -1,6 +1,6 @@
 import { describe, it } from "mocha";
 import { PulumiPlugin } from "../../src/plugin";
-import { WebSocket } from "ws";
+import WebSocket from "ws";
 import sinon, { SinonStub, spy } from "sinon";
 import child_process, { ChildProcess } from 'child_process';
 import { expect } from "chai";
@@ -32,7 +32,7 @@ describe('build commands', () => {
 
     const docker_command_args = spawn_stub.firstCall.args;
     const docker_build_args = docker_command_args[1];
-    
+
     expect(docker_command_args[0]).to.equal('docker');
     expect(docker_build_args[0]).to.equal('build');
     expect(docker_build_args[1]).to.equal(directory);

@@ -1,4 +1,7 @@
+name: Publish Pulumi Plugin
+
 on:
+  workflow_dispatch:
   push:
     paths:
       - pulumi/**

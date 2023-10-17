@@ -1,4 +1,7 @@
+name: Publish OpenTofu Plugin
+
 on:
+  workflow_dispatch:
   push:
     paths:
       - opentofu/**

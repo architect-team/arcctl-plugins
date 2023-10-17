@@ -37,7 +37,7 @@ export class PulumiPlugin extends BasePlugin {
 
     // set pulumi state to the state passed in, if it was supplied
     const state_file = 'pulumi-state.json';
-    const state_write_cmd = inputs.state ? `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : '';
+    const state_write_cmd = inputs.state ? `echo '${inputs.state}' > ${state_file}` : '';
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
     const output_delimiter = '****OUTPUT_DELIMITER****';
 

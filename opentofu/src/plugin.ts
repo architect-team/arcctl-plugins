@@ -23,7 +23,7 @@ export class OpenTofuPlugin extends BasePlugin {
     }
 
     const state_file = 'terraform.tfstate';
-    const state_write_cmd = inputs.state ?  `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : 'echo "no state, continuing..."';
+    const state_write_cmd = inputs.state ?  `echo '${inputs.state}' > ${state_file}` : 'echo "no state, continuing..."';
     const maybe_destroy = inputs.destroy ? '-destroy' : '';
 
     const output_delimiter = '****OUTPUT_DELIMITER****';

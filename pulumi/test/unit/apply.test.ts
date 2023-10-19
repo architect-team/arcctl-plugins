@@ -60,12 +60,13 @@ describe('apply commands', () => {
 
   it('runs an apply command to delete a module', async () => {
     const datacenterid = 'datacenter-id';
-    const inputs: [string, string][] = [['input1', '1']];
+    const inputs: [string, string][] = [['input1', '1'], ['input2.nestedKey', 'value']];
     const image = 'image-digest';
     const destroy = true;
     const state = '{}';
     const event_emitter = new EventEmitter(mock_websocket_connection as unknown as WebSocket);
-    await pulumi_plugin.apply(event_emitter, { datacenterid, inputs, image, destroy, state });
+
+    pulumi_plugin.apply(event_emitter, { datacenterid, inputs, image, destroy, state });
 
     const docker_command_args = spawn_stub.firstCall.args;
     const docker_run_args = docker_command_args[1];
@@ -85,7 +86,7 @@ describe('apply commands', () => {
     expect(pulumi_command[2]).to.equal(`pulumi stack init --stack ${datacenterid} &&`);
     expect(pulumi_command[3]).to.equal(`pulumi stack import --stack ${datacenterid} --file pulumi-state.json &&`);
     expect(pulumi_command[4]).to.equal(`pulumi refresh --stack ${datacenterid} --non-interactive --yes &&`);
-    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --plaintext ${inputs[0][0]}="${inputs[0][1]}" &&`);
+    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --plaintext ${inputs[0][0]}="${inputs[0][1]}" --plaintext ${inputs[1][0].replace('.', ':')}="${inputs[1][1]}" &&`);
     expect(pulumi_command[6]).to.equal(`pulumi destroy --stack ${datacenterid} --non-interactive --yes &&`);
     expect(pulumi_command[7]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
     expect(pulumi_command[8]).to.equal(`pulumi stack export --stack ${datacenterid} &&`);

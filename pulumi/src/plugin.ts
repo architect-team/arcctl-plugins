@@ -30,7 +30,7 @@ export class PulumiPlugin extends BasePlugin {
 
       const config_pairs = literal_inputs.map(([key, value]) => {
         const escaped_value = value.replace(/\"/g, "\\\"");
-        return `--plaintext ${key}="${escaped_value}"`;
+        return `--path --plaintext "${key}"="${escaped_value}"`;
       }).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }
@@ -48,7 +48,7 @@ export class PulumiPlugin extends BasePlugin {
       'run',
       '--rm',
       '--entrypoint',
-      'bash',
+      'sh',
       ...environment,
       ...mount_directories,
       inputs.image,

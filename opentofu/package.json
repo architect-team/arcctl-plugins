@@ -2,7 +2,7 @@
   "name": "arcctl-opentofu-plugin",
   "main": "src/index.ts",
   "scripts": {
-    "build": "docker build .. -t architectio/pulumi-plugin -f Dockerfile",
+    "build": "docker build .. -t architectio/opentofu-plugin -f Dockerfile",
     "dev": "nodemon",
     "start": "ts-node --transpileOnly ./src/index.ts"
   },

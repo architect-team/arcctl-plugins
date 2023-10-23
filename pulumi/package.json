@@ -2,7 +2,7 @@
   "name": "arcctl-pulumi-plugin",
   "main": "src/index.ts",
   "scripts": {
-    "build": "docker build .. -t arcctl-pulumi-plugin -f Dockerfile",
+    "build": "docker build .. -t architectio/pulumi-plugin -f Dockerfile",
     "dev": "nodemon",
     "start": "ts-node --transpileOnly ./src/index.ts",
     "test": "mocha --require ts-node/register test/**/*.ts"
@@ -15,11 +15,13 @@
     "@types/mocha": "^10.0.2",
     "@types/node": "^20.8.0",
     "@types/sinon": "^10.0.19",
+    "@types/ws": "^8.5.6",
     "chai": "^4.3.10",
     "mocha": "^10.2.0",
     "nodemon": "^3.0.1",
     "sinon": "^16.1.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "ws": "^8.14.2"
   }
 }

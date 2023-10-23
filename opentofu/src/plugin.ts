@@ -6,14 +6,15 @@ export class OpenTofuPlugin extends BasePlugin {
   apply(emitter: EventEmitter, inputs: ApplyInputs): void {
 
     let apply_vars = [];
-    const mount_directories: string[] = [];
+    const additional_docker_args: string[] = [];
+
     if ((inputs.inputs || []).length) {
       for (const [key, value] of inputs.inputs) {
         let var_value = value;
         if (value.startsWith('file:')) {
           const value_without_delimiter = value.replace('file:', '');
           const file_directory = path.parse(value_without_delimiter);
-          mount_directories.push('-v', `${file_directory.dir}:${file_directory.dir}`);
+          additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
 
           var_value = value.replace('file:', '');
         }
@@ -22,8 +23,16 @@ export class OpenTofuPlugin extends BasePlugin {
       }
     }
 
+    inputs.volumes?.forEach(volume => {
+      additional_docker_args.push('-v', `${volume.host_path}:${volume.mount_path}`);
+    });
+
+    Object.entries(inputs.environment || {}).forEach(([key, value]) => {
+      additional_docker_args.push('-e', `${key}=${value}`);
+    });
+
     const state_file = 'terraform.tfstate';
-    const state_write_cmd = inputs.state ?  `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : 'echo "no state, continuing..."';
+    const state_write_cmd = inputs.state ?  `echo '${inputs.state}' > ${state_file}` : 'echo "no state, continuing..."';
     const maybe_destroy = inputs.destroy ? '-destroy' : '';
 
     const output_delimiter = '****OUTPUT_DELIMITER****';
@@ -35,7 +44,7 @@ export class OpenTofuPlugin extends BasePlugin {
       '--rm',
       '--entrypoint',
       'sh',
-      ...mount_directories,
+      ...additional_docker_args,
       inputs.image,
       '-c',
       `

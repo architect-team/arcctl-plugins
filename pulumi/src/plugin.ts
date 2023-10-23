@@ -11,23 +11,26 @@ export class PulumiPlugin extends BasePlugin {
       inputs.datacenterid = 'default';
     }
 
-    const mount_directories: string[] = [];
+    const additional_docker_args: string[] = [];
     if ((inputs.inputs || []).length) {
       const literal_inputs: [string, string][] = [];
       for (const [key, value] of inputs.inputs) {
         if (value.startsWith('file:')) {
           const value_without_delimiter = value.replace('file:', '');
           const file_directory = path.parse(value_without_delimiter);
-          mount_directories.push('-v', `${file_directory.dir}:${file_directory.dir}`);
+          additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
           literal_inputs.push([key, value.replace('file:', '')])
         } else {
-          literal_inputs.push([key, value]);
+          // Pulumi expects nested config keys to be of the format parent:child,
+          // e.g. digitalocean:token="dotoken"
+          const modified_key = key.replace('.', ':');
+          literal_inputs.push([modified_key, value]);
         }
       }
 
       const config_pairs = literal_inputs.map(([key, value]) => {
         const escaped_value = value.replace(/\"/g, "\\\"");
-        return `--plaintext ${key}="${escaped_value}"`;
+        return `--path --plaintext "${key}"="${escaped_value}"`;
       }).join(' ');
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
     }
@@ -37,17 +40,25 @@ export class PulumiPlugin extends BasePlugin {
 
     // set pulumi state to the state passed in, if it was supplied
     const state_file = 'pulumi-state.json';
-    const state_write_cmd = inputs.state ? `echo '${JSON.stringify(inputs.state)}' > ${state_file}` : '';
+    const state_write_cmd = inputs.state ? `echo '${inputs.state}' > ${state_file}` : '';
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
     const output_delimiter = '****OUTPUT_DELIMITER****';
+
+    inputs.volumes?.forEach(volume => {
+      additional_docker_args.push('-v', `${volume.host_path}:${volume.mount_path}`);
+    });
+
+    Object.entries(inputs.environment || {}).forEach(([key, value]) => {
+      additional_docker_args.push('-e', `${key}=${value}`);
+    });
 
     const cmd_args = [
       'run',
       '--rm',
       '--entrypoint',
-      'bash',
+      'sh',
       ...environment,
-      ...mount_directories,
+      ...additional_docker_args,
       inputs.image,
       '-c',
       `${state_write_cmd}

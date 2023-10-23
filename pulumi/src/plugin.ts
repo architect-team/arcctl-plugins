@@ -45,7 +45,7 @@ export class PulumiPlugin extends BasePlugin {
       'run',
       '--rm',
       '--entrypoint',
-      'bash',
+      'sh',
       ...environment,
       ...mount_directories,
       inputs.image,

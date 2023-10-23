@@ -185,33 +185,32 @@ export abstract class BasePlugin {
     });
 
     websocketServer.on('connection', (conn, _req) => {
-        conn.on('message', (message) => {
-          const ws_message: WSRequest = JSON.parse(message.toString());
+      conn.on('message', (message) => {
+        const ws_message: WSRequest = JSON.parse(message.toString());
 
-          // Construct an emitter so that Module impls don't need to
-          // interact directly with the WebSocket connection.
-          const emitter = new EventEmitter(conn);
+        // Construct an emitter so that Module impls don't need to
+        // interact directly with the WebSocket connection.
+        const emitter = new EventEmitter(conn);
 
-          if (ws_message.command) {
-            if (ws_message.command === 'build') {
-              this.build(emitter, ws_message.request);
-            } else if (ws_message.command === 'apply') {
-              const request = ws_message.request;
-              this.apply(emitter, {
-                datacenterid: request.datacenterid,
-                image: request.image,
-                inputs: request.inputs,
-                state: request.state,
-                destroy: request.destroy,
-              });
-            } else {
-              emitter.error(`Invalid command: ${(ws_message as any).command}`)
-            }
+        if (ws_message.command) {
+          if (ws_message.command === 'build') {
+            this.build(emitter, ws_message.request);
+          } else if (ws_message.command === 'apply') {
+            const request = ws_message.request;
+            this.apply(emitter, {
+              datacenterid: request.datacenterid,
+              image: request.image,
+              inputs: request.inputs,
+              state: request.state,
+              destroy: request.destroy,
+            });
           } else {
-            emitter.error(`Invalid message: ${message}`);
+            emitter.error(`Invalid command: ${(ws_message as any).command}`)
           }
-        });
-      }
-    );
+        } else {
+          emitter.error(`Invalid message: ${message}`);
+        }
+      });
+    });
   }
 }

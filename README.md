@@ -55,3 +55,7 @@ The apply command is used to execute the module, using any existing state and in
   }
 }
 ```
+
+### Running `arcctl` with a manually-started plugin
+
+For ease of testing, commands can be run against a manually-started plugin. In order to instruct `arcctl` to use the manually-started plugin and not start one on its own, run the `deno` command with the prefix `DEV_PLUGIN_PORT=<port_number>` where `<port_number>` is the number of the port that the plugin was started on.

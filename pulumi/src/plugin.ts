@@ -21,7 +21,10 @@ export class PulumiPlugin extends BasePlugin {
           additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
           literal_inputs.push([key, value.replace('file:', '')])
         } else {
-          literal_inputs.push([key, value]);
+          // Pulumi expects nested config keys to be of the format parent:child,
+          // e.g. digitalocean:token="dotoken"
+          const modified_key = key.replace('.', ':');
+          literal_inputs.push([modified_key, value]);
         }
       }
 

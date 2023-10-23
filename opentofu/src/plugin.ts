@@ -6,7 +6,10 @@ export class OpenTofuPlugin extends BasePlugin {
   apply(emitter: EventEmitter, inputs: ApplyInputs): void {
 
     let apply_vars = [];
-    const mount_directories: string[] = [];
+    const mount_directories: string[] = [
+      '-v', '/var/run/docker.sock:/var/run/docker.sock',
+      '-e', 'DOCKER_HOST=unix:///var/run/docker.sock',
+    ];
     if ((inputs.inputs || []).length) {
       for (const [key, value] of inputs.inputs) {
         let var_value = value;

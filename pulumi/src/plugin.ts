@@ -11,7 +11,10 @@ export class PulumiPlugin extends BasePlugin {
       inputs.datacenterid = 'default';
     }
 
-    const mount_directories: string[] = [];
+    const mount_directories: string[] = [
+      '-v', '/var/run/docker.sock:/var/run/docker.sock',
+      '-e', 'DOCKER_HOST=unix:///var/run/docker.sock',
+    ];
     if ((inputs.inputs || []).length) {
       const literal_inputs: [string, string][] = [];
       for (const [key, value] of inputs.inputs) {

@@ -11,17 +11,14 @@ export class PulumiPlugin extends BasePlugin {
       inputs.datacenterid = 'default';
     }
 
-    const mount_directories: string[] = [
-      '-v', '/var/run/docker.sock:/var/run/docker.sock',
-      '-e', 'DOCKER_HOST=unix:///var/run/docker.sock',
-    ];
+    const additional_docker_args: string[] = [];
     if ((inputs.inputs || []).length) {
       const literal_inputs: [string, string][] = [];
       for (const [key, value] of inputs.inputs) {
         if (value.startsWith('file:')) {
           const value_without_delimiter = value.replace('file:', '');
           const file_directory = path.parse(value_without_delimiter);
-          mount_directories.push('-v', `${file_directory.dir}:${file_directory.dir}`);
+          additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
           literal_inputs.push([key, value.replace('file:', '')])
         } else {
           literal_inputs.push([key, value]);
@@ -44,13 +41,21 @@ export class PulumiPlugin extends BasePlugin {
     const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
     const output_delimiter = '****OUTPUT_DELIMITER****';
 
+    inputs.volumes?.forEach(volume => {
+      additional_docker_args.push('-v', `${volume.host_path}:${volume.mount_path}`);
+    });
+
+    Object.entries(inputs.environment || {}).forEach(([key, value]) => {
+      additional_docker_args.push('-e', `${key}=${value}`);
+    });
+
     const cmd_args = [
       'run',
       '--rm',
       '--entrypoint',
       'sh',
       ...environment,
-      ...mount_directories,
+      ...additional_docker_args,
       inputs.image,
       '-c',
       `${state_write_cmd}

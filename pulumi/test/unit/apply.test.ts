@@ -39,7 +39,7 @@ describe('apply commands', () => {
     expect(docker_run_args[0]).to.equal('run');
     expect(docker_run_args[1]).to.equal('--rm');
     expect(docker_run_args[2]).to.equal('--entrypoint');
-    expect(docker_run_args[3]).to.equal('bash');
+    expect(docker_run_args[3]).to.equal('sh');
     expect(docker_run_args[4]).to.equal('-e');
     expect(docker_run_args[5]).to.equal('PULUMI_CONFIG_PASSPHRASE=');
     expect(docker_run_args[6]).to.equal(image);
@@ -49,7 +49,7 @@ describe('apply commands', () => {
     expect(pulumi_command[2]).to.equal(`pulumi stack init --stack ${datacenterid} &&`);
     expect(pulumi_command[3]).to.be.empty;
     expect(pulumi_command[4]).to.equal(`pulumi refresh --stack ${datacenterid} --non-interactive --yes &&`);
-    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --plaintext ${inputs[0][0]}="${inputs[0][1]}" &&`);
+    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --path --plaintext "${inputs[0][0]}"="${inputs[0][1]}" &&`);
     expect(pulumi_command[6]).to.equal(`pulumi up --stack ${datacenterid} --non-interactive --yes &&`);
     expect(pulumi_command[7]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
     expect(pulumi_command[8]).to.equal(`pulumi stack export --stack ${datacenterid} &&`);
@@ -76,7 +76,7 @@ describe('apply commands', () => {
     expect(docker_run_args[0]).to.equal('run');
     expect(docker_run_args[1]).to.equal('--rm');
     expect(docker_run_args[2]).to.equal('--entrypoint');
-    expect(docker_run_args[3]).to.equal('bash');
+    expect(docker_run_args[3]).to.equal('sh');
     expect(docker_run_args[4]).to.equal('-e');
     expect(docker_run_args[5]).to.equal('PULUMI_CONFIG_PASSPHRASE=');
     expect(docker_run_args[6]).to.equal(image);
@@ -86,7 +86,7 @@ describe('apply commands', () => {
     expect(pulumi_command[2]).to.equal(`pulumi stack init --stack ${datacenterid} &&`);
     expect(pulumi_command[3]).to.equal(`pulumi stack import --stack ${datacenterid} --file pulumi-state.json &&`);
     expect(pulumi_command[4]).to.equal(`pulumi refresh --stack ${datacenterid} --non-interactive --yes &&`);
-    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --plaintext ${inputs[0][0]}="${inputs[0][1]}" --plaintext ${inputs[1][0].replace('.', ':')}="${inputs[1][1]}" &&`);
+    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --path --plaintext "${inputs[0][0]}"="${inputs[0][1]}" --path --plaintext "${inputs[1][0].replace('.', ':')}"="${inputs[1][1]}" &&`);
     expect(pulumi_command[6]).to.equal(`pulumi destroy --stack ${datacenterid} --non-interactive --yes &&`);
     expect(pulumi_command[7]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
     expect(pulumi_command[8]).to.equal(`pulumi stack export --stack ${datacenterid} &&`);

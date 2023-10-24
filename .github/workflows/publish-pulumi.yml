@@ -6,11 +6,24 @@ on:
     paths:
       - pulumi/**
 
+# TODO: add job to run tests, push depends on it
+
 jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4.0.0
+      - name: Run tests
+        run: npm test
   push_main_to_registry:
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'arc-')
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
+    needs: [test]
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4

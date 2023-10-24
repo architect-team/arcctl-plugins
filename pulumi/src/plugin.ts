@@ -11,29 +11,27 @@ export class PulumiPlugin extends BasePlugin {
       inputs.datacenterid = 'default';
     }
 
+    const apply_vars: string[] = [];
     const additional_docker_args: string[] = [];
-    if ((inputs.inputs || []).length) {
-      const literal_inputs: [string, string][] = [];
-      for (const [key, value] of inputs.inputs) {
-        if (value.startsWith('file:')) {
-          const value_without_delimiter = value.replace('file:', '');
-          const file_directory = path.parse(value_without_delimiter);
-          additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
-          literal_inputs.push([key, value.replace('file:', '')])
-        } else {
-          // Pulumi expects nested config keys to be of the format parent:child,
-          // e.g. digitalocean:token="dotoken"
-          const modified_key = key.replace('.', ':');
-          literal_inputs.push([modified_key, value]);
-        }
+
+    Object.entries(inputs.inputs).forEach(([key, value]) => {
+      console.log(key, value);
+      let var_value = value;
+      if (typeof value === 'string' && value.startsWith('file:')) {
+        const value_without_delimiter = value.replace('file:', '');
+        const file_directory = path.parse(value_without_delimiter);
+        additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
+
+        var_value = value.replace('file:', '');
       }
 
-      const config_pairs = literal_inputs.map(([key, value]) => {
-        const escaped_value = value.replace(/\"/g, "\\\"");
-        return `--path --plaintext "${key}"="${escaped_value}"`;
-      }).join(' ');
-      pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${config_pairs} &&`;
+      apply_vars.push(`--path --plaintext '${key}'='${typeof var_value === 'object' ? JSON.stringify(var_value) : var_value}'`);
+    });
+
+    if (apply_vars.length > 0) {
+      pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${apply_vars.join(' ')} &&`
     }
+
     console.log(`Pulumi config: ${pulumi_config}`);
     const apply_or_destroy = inputs.destroy ? 'destroy' : 'up';
     const environment = ['-e', 'PULUMI_CONFIG_PASSPHRASE=']; // ignore this pulumi requirement

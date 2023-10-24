@@ -4,24 +4,21 @@ import path from 'path';
 
 export class OpenTofuPlugin extends BasePlugin {
   apply(emitter: EventEmitter, inputs: ApplyInputs): void {
-
-    let apply_vars = [];
+    const apply_vars: string[] = [];
     const additional_docker_args: string[] = [];
 
-    if ((inputs.inputs || []).length) {
-      for (const [key, value] of inputs.inputs) {
-        let var_value = value;
-        if (value.startsWith('file:')) {
-          const value_without_delimiter = value.replace('file:', '');
-          const file_directory = path.parse(value_without_delimiter);
-          additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
+    Object.entries(inputs.inputs).forEach(([key, value]) => {
+      let var_value = value;
+      if (typeof value === 'string' && value.startsWith('file:')) {
+        const value_without_delimiter = value.replace('file:', '');
+        const file_directory = path.parse(value_without_delimiter);
+        additional_docker_args.push('-v', `${file_directory.dir}:${file_directory.dir}`);
 
-          var_value = value.replace('file:', '');
-        }
-
-        apply_vars.push(`-var="${key}=${var_value}"`);
+        var_value = value.replace('file:', '');
       }
-    }
+
+      apply_vars.push(`-var='${key}=${typeof var_value === 'object' ? JSON.stringify(var_value) : var_value}'`);
+    });
 
     inputs.volumes?.forEach(volume => {
       additional_docker_args.push('-v', `${volume.host_path}:${volume.mount_path}`);
@@ -70,20 +67,25 @@ export class OpenTofuPlugin extends BasePlugin {
 
     const tofuPromise = () => {
       return new Promise((resolve, reject) => {
-        console.log(`Running with args: ${cmd_args.join(' ')}`);
-        const pulumi_result = spawn('docker', cmd_args, {
-          stdio: ['inherit'],
-        });
+        try {
+          console.log(`Running with args: ${cmd_args.join(' ')}`);
+          const pulumi_result = spawn('docker', cmd_args, {
+            stdio: ['inherit'],
+          });
 
-        pulumi_result.stdout?.on('data', processChunk);
-        pulumi_result.stderr?.on('data', processChunk);
-        pulumi_result.on('exit', (code) => {
-          if (code !== 0) {
-            emitter.error(`${output}\nExited with exit code: ${code}`);
-            reject();
-          }
-          resolve(code);
-        });
+          pulumi_result.stdout?.on('data', processChunk);
+          pulumi_result.stderr?.on('data', processChunk);
+          pulumi_result.on('exit', (code) => {
+            if (code !== 0) {
+              emitter.error(`${output}\nExited with exit code: ${code}`);
+              reject();
+            }
+            resolve(code);
+          });
+        } catch (err) {
+          emitter.error(`${output}Error: ${err}`);
+          reject(err);
+        }
       });
     };
 
@@ -104,6 +106,6 @@ export class OpenTofuPlugin extends BasePlugin {
         }
       }
       emitter.applyOutput(state, outputs);
-    }).catch();
+    }).catch(() => {});
   }
 }

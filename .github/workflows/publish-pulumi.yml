@@ -6,8 +6,6 @@ on:
     paths:
       - pulumi/**
 
-# TODO: add job to run tests, push depends on it
-
 jobs:
   test:
     name: Run tests
@@ -17,10 +15,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Node.js environment
         uses: actions/setup-node@v4.0.0
-      - name: Install core dependencies
+      - name: Install core dependencies # TODO: remove step when core is published
         working-directory: ./core
         run: npm ci
-      - name: Build core
+      - name: Build core # TODO: remove step when core is published
         working-directory: ./core
         run: npm run build
       - name: Install dependencies

@@ -158,6 +158,10 @@ export abstract class BasePlugin {
     docker_result.stdout.on('error', processError);
     docker_result.stderr.on('error', processError);
 
+    docker_result.on('error', (error) => {
+      emitter.error(error.message);
+    });
+
     docker_result.on('close', (code) => {
       if (code === 0 && image_digest !== '') {
         emitter.buildOutput(image_digest);

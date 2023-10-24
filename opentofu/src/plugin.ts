@@ -79,8 +79,9 @@ export class OpenTofuPlugin extends BasePlugin {
         pulumi_result.stderr?.on('data', processChunk);
         pulumi_result.on('exit', (code) => {
           if (code !== 0) {
-            emitter.error(`${output}\nExited with exit code: ${code}`);
-            reject();
+            const error_message = `${output}\nExited with exit code: ${code}`;
+            emitter.error(error_message);
+            return reject(error_message);
           }
           resolve(code);
         });
@@ -104,6 +105,8 @@ export class OpenTofuPlugin extends BasePlugin {
         }
       }
       emitter.applyOutput(state, outputs);
-    }).catch();
+    }).catch(error => {
+      console.log(error);
+    });
   }
 }

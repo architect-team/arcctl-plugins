@@ -15,7 +15,7 @@ export interface BuildInputs {
 export interface ApplyInputs {
   datacenterid: string;
   state?: string;
-  inputs: Record<string, any>;
+  inputs: [string, string][];
   environment?: Record<string, string>;
   volumes?: {
     host_path: string;
@@ -28,7 +28,7 @@ export interface ApplyInputs {
 type ApplyRequest = {
   datacenterid: string;
   image: string;
-  inputs: Record<string, any>;
+  inputs: [string, string][];
   environment?: Record<string, string>;
   volumes?: {
     host_path: string;

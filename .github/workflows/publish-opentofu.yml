@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - opentofu/**
+      - core/**
 
 jobs:
   test:

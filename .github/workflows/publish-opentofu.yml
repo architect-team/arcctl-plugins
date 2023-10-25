@@ -5,8 +5,29 @@ on:
   push:
     paths:
       - opentofu/**
+      - core/**
 
 jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4.0.0
+      - name: Install core dependencies # TODO: remove step when core is published
+        working-directory: ./core
+        run: npm ci
+      - name: Build core # TODO: remove step when core is published
+        working-directory: ./core
+        run: npm run build
+      - name: Install dependencies
+        working-directory: ./opentofu
+        run: npm ci
+      - name: Run tests
+        working-directory: ./opentofu
+        run: npm test
   push_main_to_registry:
     if: github.ref_name == 'main' || startsWith(github.ref_name, 'arc-')
     name: Push Docker image to Docker Hub

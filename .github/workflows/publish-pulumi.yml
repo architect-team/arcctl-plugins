@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - pulumi/**
+      - core/**
 
 jobs:
   test:

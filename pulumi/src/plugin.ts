@@ -14,8 +14,7 @@ export class PulumiPlugin extends BasePlugin {
     const apply_vars: string[] = [];
     const additional_docker_args: string[] = [];
 
-    Object.entries(inputs.inputs).forEach(([key, value]) => {
-      console.log(key, value);
+    for (const [key, value] of inputs.inputs) {
       let var_value = value;
       if (typeof value === 'string' && value.startsWith('file:')) {
         const value_without_delimiter = value.replace('file:', '');
@@ -25,8 +24,8 @@ export class PulumiPlugin extends BasePlugin {
         var_value = value.replace('file:', '');
       }
 
-      apply_vars.push(`--path --plaintext '${key}'='${typeof var_value === 'object' ? JSON.stringify(var_value) : var_value}'`);
-    });
+      apply_vars.push(`--path --plaintext "${key}"="${typeof var_value === 'object' ? JSON.stringify(var_value) : var_value}"`);
+    };
 
     if (apply_vars.length > 0) {
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${apply_vars.join(' ')} &&`

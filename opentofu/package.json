@@ -4,15 +4,24 @@
   "scripts": {
     "build": "docker build .. -t architectio/opentofu-plugin -f Dockerfile",
     "dev": "nodemon",
-    "start": "ts-node --transpileOnly ./src/index.ts"
+    "start": "ts-node --transpileOnly ./src/index.ts",
+    "test": "mocha  --require ts-node/register test/**/*.ts"
   },
   "dependencies": {
     "arcctl-plugin-core": "file:../core"
   },
   "devDependencies": {
+    "@types/chai": "^4.3.9",
+    "@types/mocha": "^10.0.3",
     "@types/node": "^20.8.0",
+    "@types/sinon": "^10.0.20",
+    "@types/ws": "^8.5.8",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
     "nodemon": "^3.0.1",
+    "sinon": "^17.0.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "ws": "^8.14.2"
   }
 }

@@ -7,7 +7,7 @@ export class OpenTofuPlugin extends BasePlugin {
     const apply_vars: string[] = [];
     const additional_docker_args: string[] = [];
 
-    Object.entries(inputs.inputs).forEach(([key, value]) => {
+    for (const [key, value] of inputs.inputs) {
       let var_value = value;
       if (typeof value === 'string' && value.startsWith('file:')) {
         const value_without_delimiter = value.replace('file:', '');
@@ -17,8 +17,8 @@ export class OpenTofuPlugin extends BasePlugin {
         var_value = value.replace('file:', '');
       }
 
-      apply_vars.push(`-var='${key}=${typeof var_value === 'object' ? JSON.stringify(var_value) : var_value}'`);
-    });
+      apply_vars.push(`-var="${key}=${typeof var_value === 'object' ? JSON.stringify(var_value) : var_value}"`);
+    };
 
     inputs.volumes?.forEach(volume => {
       additional_docker_args.push('-v', `${volume.host_path}:${volume.mount_path}`);

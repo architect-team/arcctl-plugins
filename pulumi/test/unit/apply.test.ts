@@ -86,7 +86,7 @@ describe('apply commands', () => {
     expect(pulumi_command[2]).to.equal(`pulumi stack init --stack ${datacenterid} &&`);
     expect(pulumi_command[3]).to.equal(`pulumi stack import --stack ${datacenterid} --file pulumi-state.json &&`);
     expect(pulumi_command[4]).to.equal(`pulumi refresh --stack ${datacenterid} --non-interactive --yes &&`);
-    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --path --plaintext "${inputs[0][0]}"="${inputs[0][1]}" --path --plaintext "${inputs[1][0]}"="${inputs[1][1]}" &&`);
+    expect(pulumi_command[5]).to.equal(`pulumi config --stack ${datacenterid} set-all --path --plaintext "${inputs[0][0]}"="${inputs[0][1]}" --path --plaintext "${inputs[1][0].replace('.', ':')}"="${inputs[1][1]}" &&`);
     expect(pulumi_command[6]).to.equal(`pulumi destroy --stack ${datacenterid} --non-interactive --yes &&`);
     expect(pulumi_command[7]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
     expect(pulumi_command[8]).to.equal(`pulumi stack export --stack ${datacenterid} &&`);

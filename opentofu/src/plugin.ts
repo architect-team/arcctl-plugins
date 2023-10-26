@@ -28,9 +28,16 @@ export class OpenTofuPlugin extends BasePlugin {
       additional_docker_args.push('-e', `${key}=${value}`);
     });
 
+
+    // Write and mount tofu state to the state passed in, if it was supplied
     const state_file = 'terraform.tfstate';
-    const state_write_cmd = inputs.state ?  `echo '${inputs.state}' > ${state_file}` : 'echo "no state, continuing..."';
-    const maybe_destroy = inputs.destroy ? '-destroy' : '';
+    let state_file_arg = '';
+    if (inputs.state) {
+      additional_docker_args.push('-v', `${inputs.state}:/${state_file}`);
+      state_file_arg = ` -state=/${state_file}`;
+    }
+
+    const maybe_destroy = inputs.destroy ? ' -destroy' : '';
 
     const output_delimiter = '****OUTPUT_DELIMITER****';
 
@@ -44,15 +51,13 @@ export class OpenTofuPlugin extends BasePlugin {
       ...additional_docker_args,
       inputs.image,
       '-c',
-      `
-      ${state_write_cmd} &&
-      tofu init &&
-      tofu plan -input=false -out=tfplan -detailed-exitcode ${maybe_destroy} ${apply_vars.join(' ')}; if [ $? -eq 1 ]; then false; else true; fi &&
-      tofu apply ${maybe_destroy} tfplan &&
-      echo "${output_delimiter}" &&
-      cat ${state_file} &&
-      echo "${output_delimiter}" &&
-      tofu output -json`
+      `tofu init &&
+       tofu plan -input=false -out=tfplan -detailed-exitcode${state_file_arg}${maybe_destroy} ${apply_vars.join(' ')}; if [ $? -eq 1 ]; then false; else true; fi &&
+       tofu apply${maybe_destroy}${state_file_arg} tfplan &&
+       echo "${output_delimiter}" &&
+       cat ${state_file} &&
+       echo "${output_delimiter}" &&
+       tofu output -json`
     ];
 
 

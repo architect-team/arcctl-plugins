@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import { ApplyInputs, BasePlugin, EventEmitter } from "arcctl-plugin-core";
 import path from 'path';
+import { dot } from 'dot-object';
 
 export class PulumiPlugin extends BasePlugin {
   // run pulumi image and apply provided pulumi
@@ -24,21 +25,30 @@ export class PulumiPlugin extends BasePlugin {
         var_value = value.replace('file:', '');
       }
 
-      apply_vars.push(`--path --plaintext '${key}'='${typeof var_value === 'object' ? JSON.stringify(var_value) : var_value}'`);
+      if (typeof value === 'object') {
+        const dotObj = dot(value);
+        for (const [nestedKey, nestedValue] of Object.entries(dotObj)) {
+
+          apply_vars.push(`--path --plaintext '${key}:${nestedKey.replaceAll('.', ':')}'='${nestedValue}'`);
+        }
+      } else {
+        apply_vars.push(`--path --plaintext '${key}'='${var_value}'`);
+      }
     });
 
     if (apply_vars.length > 0) {
       pulumi_config = `pulumi config --stack ${inputs.datacenterid} set-all ${apply_vars.join(' ')} &&`
     }
-
-    console.log(`Pulumi config: ${pulumi_config}`);
     const apply_or_destroy = inputs.destroy ? 'destroy' : 'up';
     const environment = ['-e', 'PULUMI_CONFIG_PASSPHRASE=']; // ignore this pulumi requirement
 
-    // set pulumi state to the state passed in, if it was supplied
+    // Write and mount pulumi state to the state passed in, if it was supplied
     const state_file = 'pulumi-state.json';
-    const state_write_cmd = inputs.state ? `echo '${inputs.state}' > ${state_file}` : '';
-    const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file ${state_file} &&` : '';
+    if (inputs.state) {
+      additional_docker_args.push('-v', `${inputs.state}:/${state_file}`);
+    }
+
+    const state_import_cmd = inputs.state ? `pulumi stack import --stack ${inputs.datacenterid} --file /${state_file} &&` : '';
     const output_delimiter = '****OUTPUT_DELIMITER****';
 
     inputs.volumes?.forEach(volume => {
@@ -58,17 +68,16 @@ export class PulumiPlugin extends BasePlugin {
       ...additional_docker_args,
       inputs.image,
       '-c',
-      `${state_write_cmd}
-        pulumi login --local &&
-        pulumi stack init --stack ${inputs.datacenterid} &&
-        ${state_import_cmd}
-        pulumi refresh --stack ${inputs.datacenterid} --non-interactive --yes &&
-        ${pulumi_config}
-        pulumi ${apply_or_destroy} --stack ${inputs.datacenterid} --non-interactive --yes &&
-        echo "${output_delimiter}" &&
-        pulumi stack export --stack ${inputs.datacenterid} &&
-        echo "${output_delimiter}" &&
-        pulumi stack output --show-secrets -j`
+      `pulumi login --local &&
+       pulumi stack init --stack ${inputs.datacenterid} &&
+       ${state_import_cmd}
+       pulumi refresh --stack ${inputs.datacenterid} --non-interactive --yes &&
+       ${pulumi_config}
+       pulumi ${apply_or_destroy} --stack ${inputs.datacenterid} --non-interactive --yes &&
+       echo "${output_delimiter}" &&
+       pulumi stack export --stack ${inputs.datacenterid} &&
+       echo "${output_delimiter}" &&
+       pulumi stack output --show-secrets -j`
     ];
 
     console.log(`Inputs: ${JSON.stringify(inputs)}`);

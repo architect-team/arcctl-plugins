@@ -15,7 +15,6 @@ export class PulumiPlugin extends BasePlugin {
     const additional_docker_args: string[] = [];
 
     Object.entries(inputs.inputs).forEach(([key, value]) => {
-      console.log(key, value);
       let var_value = value;
       if (typeof value === 'string' && value.startsWith('file:')) {
         const value_without_delimiter = value.replace('file:', '');

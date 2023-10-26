@@ -26,10 +26,10 @@ describe('apply commands', () => {
 
   it('runs an apply command to create a module', async () => {
     const datacenterid = 'datacenter-id';
-    const inputs: [string, string][] = [['input1', '1']];
+    const inputs = {'input1': '1'};
     const image = 'image-digest';
     const event_emitter = new EventEmitter(mock_websocket_connection as unknown as WebSocket);
-    await opentofu_plugin.apply(event_emitter, { datacenterid, inputs, image });
+    opentofu_plugin.apply(event_emitter, { datacenterid, inputs, image });
 
     const docker_command_args = spawn_stub.firstCall.args;
     const docker_run_args = docker_command_args[1];
@@ -45,7 +45,7 @@ describe('apply commands', () => {
     expect(opentofu_command[0]).to.be.empty;
     expect(opentofu_command[1]).to.equal('echo "no state, continuing..." &&');
     expect(opentofu_command[2]).to.equal(`tofu init &&`);
-    expect(opentofu_command[3]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode  -var="${inputs[0][0]}=${inputs[0][1]}"; if [ $? -eq 1 ]; then false; else true; fi &&`);
+    expect(opentofu_command[3]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode  -var='input1=1'; if [ $? -eq 1 ]; then false; else true; fi &&`);
     expect(opentofu_command[4]).to.equal(`tofu apply  tfplan &&`);
     expect(opentofu_command[5]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
     expect(opentofu_command[6]).to.equal(`cat terraform.tfstate &&`);
@@ -56,7 +56,12 @@ describe('apply commands', () => {
 
   it('runs an apply command to delete a module', async () => {
     const datacenterid = 'datacenter-id';
-    const inputs: [string, string][] = [['input1', '1'], ['input2.nestedKey', 'value']];
+    const inputs = {
+      'input1': '1',
+      'input2': {
+        'nestedKey': 'value'
+      }
+    };
     const image = 'image-digest';
     const destroy = true;
     const state = '{}';
@@ -78,7 +83,7 @@ describe('apply commands', () => {
     expect(opentofu_command[0]).to.be.empty;
     expect(opentofu_command[1]).to.equal(`echo '${state}' > terraform.tfstate &&`);
     expect(opentofu_command[2]).to.equal('tofu init &&');
-    expect(opentofu_command[3]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode -destroy -var="${inputs[0][0]}=${inputs[0][1]}" -var="${inputs[1][0]}=${inputs[1][1]}"; if [ $? -eq 1 ]; then false; else true; fi &&`);
+    expect(opentofu_command[3]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode -destroy -var='input1=1' -var='input2={"nestedKey":"value"}'; if [ $? -eq 1 ]; then false; else true; fi &&`);
     expect(opentofu_command[4]).to.equal(`tofu apply -destroy tfplan &&`);
     expect(opentofu_command[5]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
     expect(opentofu_command[6]).to.equal(`cat terraform.tfstate &&`);

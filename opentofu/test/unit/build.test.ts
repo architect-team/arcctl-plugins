@@ -28,7 +28,7 @@ describe('build commands', () => {
     const directory = '/home/test-user/opentofu-module/';
     const event_emitter = new EventEmitter(mock_websocket_connection as unknown as WebSocket);
 
-    await opentofu_plugin.build(event_emitter, { directory });
+    opentofu_plugin.build(event_emitter, { directory });
 
     const docker_command_args = spawn_stub.firstCall.args;
     const docker_build_args = docker_command_args[1];

@@ -25,11 +25,15 @@ export class PulumiPlugin extends BasePlugin {
         var_value = value.replace('file:', '');
       }
 
-      if (typeof value === 'object') {
-        const dotObj = dot(value);
-        for (const [nestedKey, nestedValue] of Object.entries(dotObj)) {
-
-          apply_vars.push(`--path --plaintext '${key}:${nestedKey.replaceAll('.', ':')}'='${nestedValue}'`);
+      if (typeof var_value === 'object') {
+        // TODO: Something isn't quite correct still when we have something like a command array
+        if (Array.isArray(value)) {
+          apply_vars.push(`--path --plaintext '${key}':'${JSON.stringify(var_value)}'`);
+        } else {
+          const dotObj = dot(value);
+          for (const [nestedKey, nestedValue] of Object.entries(dotObj)) {
+            apply_vars.push(`--path --plaintext '${key}:${nestedKey.replaceAll('.', ':')}'='${nestedValue}'`);
+          }
         }
       } else {
         apply_vars.push(`--path --plaintext '${key}'='${var_value}'`);

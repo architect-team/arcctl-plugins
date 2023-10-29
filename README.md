@@ -19,13 +19,13 @@ It's necessary to mount the path to the module you want to test, e.g. `/Users/yo
 Rebuild the image with `npm run build` when making changes to test any modifications.
 
 ```sh
-docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v /path/to/test/module:/path/to/test/module [IMAGE_NAME] sh -c "npm run dev"
+docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v /path/to/test/module:/path/to/test/module -v /path/to/state/dir:/state [IMAGE_NAME] sh -c "npm run dev"
 ```
 
 Or in order to test without rebuilding the plugin's image, run a version of the following, where the `src` directories of the core and one of the specific plugins are mounted. Be sure to run this from the root of the repo. Changes will hot-reload using nodemon.
 
 ```sh
-docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v ./pulumi:/app -v ./core:/core -v /home/ryan/Code/gcp-pulumi-modules:/home/ryan/Code/gcp-pulumi-modules arcctl-pulumi-plugin sh -c "npm run dev"
+docker run -it -p 50051:50051 -v /var/run/docker.sock:/var/run/docker.sock -v ./pulumi:/app -v ./core:/core -v /home/ryan/Code/gcp-pulumi-modules:/home/ryan/Code/gcp-pulumi-modules arcctl-pulumi-plugin sh -v /path/to/state/dir:/state -c "npm run dev"
 ```
 
 ### Running test requests

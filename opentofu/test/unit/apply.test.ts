@@ -33,24 +33,25 @@ describe('apply commands', () => {
 
     const docker_command_args = spawn_stub.firstCall.args;
     const docker_run_args = docker_command_args[1];
-    const opentofu_command = docker_run_args[6].split('\n').map((c: string) => c.trim());
 
     expect(docker_command_args[0]).to.equal('docker');
-    expect(docker_run_args[0]).to.equal('run');
-    expect(docker_run_args[1]).to.equal('--rm');
-    expect(docker_run_args[2]).to.equal('--entrypoint');
-    expect(docker_run_args[3]).to.equal('sh');
-    expect(docker_run_args[4]).to.equal(image);
-    expect(docker_run_args[5]).to.equal('-c');
-    expect(opentofu_command[0]).to.be.empty;
-    expect(opentofu_command[1]).to.equal('echo "no state, continuing..." &&');
-    expect(opentofu_command[2]).to.equal(`tofu init &&`);
-    expect(opentofu_command[3]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode  -var='input1=1'; if [ $? -eq 1 ]; then false; else true; fi &&`);
-    expect(opentofu_command[4]).to.equal(`tofu apply  tfplan &&`);
-    expect(opentofu_command[5]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
-    expect(opentofu_command[6]).to.equal(`cat terraform.tfstate &&`);
-    expect(opentofu_command[7]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
-    expect(opentofu_command[8]).to.equal('tofu output -json');
+    let docker_run_idx = 0;
+    expect(docker_run_args[docker_run_idx++]).to.equal('run');
+    expect(docker_run_args[docker_run_idx++]).to.equal('--rm');
+    expect(docker_run_args[docker_run_idx++]).to.equal('--entrypoint');
+    expect(docker_run_args[docker_run_idx++]).to.equal('sh');
+    expect(docker_run_args[docker_run_idx++]).to.equal(image);
+    expect(docker_run_args[docker_run_idx++]).to.equal('-c');
+
+    const opentofu_command = docker_run_args[docker_run_idx].split('\n').map((c: string) => c.trim());
+    let command_idx = 0;
+    expect(opentofu_command[command_idx++]).to.equal(`tofu init &&`);
+    expect(opentofu_command[command_idx++]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode -var='input1=1'; if [ $? -eq 1 ]; then false; else true; fi &&`);
+    expect(opentofu_command[command_idx++]).to.equal(`tofu apply tfplan &&`);
+    expect(opentofu_command[command_idx++]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
+    expect(opentofu_command[command_idx++]).to.equal(`cat terraform.tfstate &&`);
+    expect(opentofu_command[command_idx++]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
+    expect(opentofu_command[command_idx++]).to.equal('tofu output -json');
     expect(docker_command_args[2]).to.deep.equal({ stdio: ['inherit'] });
   });
 
@@ -71,24 +72,27 @@ describe('apply commands', () => {
 
     const docker_command_args = spawn_stub.firstCall.args;
     const docker_run_args = docker_command_args[1];
-    const opentofu_command = docker_run_args[6].split('\n').map((c: string) => c.trim());
 
     expect(docker_command_args[0]).to.equal('docker');
-    expect(docker_run_args[0]).to.equal('run');
-    expect(docker_run_args[1]).to.equal('--rm');
-    expect(docker_run_args[2]).to.equal('--entrypoint');
-    expect(docker_run_args[3]).to.equal('sh');
-    expect(docker_run_args[4]).to.equal(image);
-    expect(docker_run_args[5]).to.equal('-c');
-    expect(opentofu_command[0]).to.be.empty;
-    expect(opentofu_command[1]).to.equal(`echo '${state}' > terraform.tfstate &&`);
-    expect(opentofu_command[2]).to.equal('tofu init &&');
-    expect(opentofu_command[3]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode -destroy -var='input1=1' -var='input2={"nestedKey":"value"}'; if [ $? -eq 1 ]; then false; else true; fi &&`);
-    expect(opentofu_command[4]).to.equal(`tofu apply -destroy tfplan &&`);
-    expect(opentofu_command[5]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
-    expect(opentofu_command[6]).to.equal(`cat terraform.tfstate &&`);
-    expect(opentofu_command[7]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
-    expect(opentofu_command[8]).to.equal('tofu output -json');
+    let docker_run_idx = 0;
+    expect(docker_run_args[docker_run_idx++]).to.equal('run');
+    expect(docker_run_args[docker_run_idx++]).to.equal('--rm');
+    expect(docker_run_args[docker_run_idx++]).to.equal('--entrypoint');
+    expect(docker_run_args[docker_run_idx++]).to.equal('sh');
+    expect(docker_run_args[docker_run_idx++]).to.equal('-v');
+    expect(docker_run_args[docker_run_idx++]).to.equal(`${state}:/terraform.tfstate`);
+    expect(docker_run_args[docker_run_idx++]).to.equal(image);
+    expect(docker_run_args[docker_run_idx++]).to.equal('-c');
+
+    const opentofu_command = docker_run_args[docker_run_idx].split('\n').map((c: string) => c.trim());
+    let command_idx = 0;
+    expect(opentofu_command[command_idx++]).to.equal('tofu init &&');
+    expect(opentofu_command[command_idx++]).to.equal(`tofu plan -input=false -out=tfplan -detailed-exitcode -state=/terraform.tfstate -destroy -var='input1=1' -var='input2={"nestedKey":"value"}'; if [ $? -eq 1 ]; then false; else true; fi &&`);
+    expect(opentofu_command[command_idx++]).to.equal(`tofu apply -destroy -state=/terraform.tfstate tfplan &&`);
+    expect(opentofu_command[command_idx++]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
+    expect(opentofu_command[command_idx++]).to.equal(`cat terraform.tfstate &&`);
+    expect(opentofu_command[command_idx++]).to.equal('echo "****OUTPUT_DELIMITER****" &&');
+    expect(opentofu_command[command_idx++]).to.equal('tofu output -json');
     expect(docker_command_args[2]).to.deep.equal({ stdio: ['inherit'] });
   });
 });

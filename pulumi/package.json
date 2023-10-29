@@ -8,10 +8,12 @@
     "test": "mocha --require ts-node/register test/**/*.ts"
   },
   "dependencies": {
-    "arcctl-plugin-core": "file:../core"
+    "arcctl-plugin-core": "file:../core",
+    "dot-object": "^2.1.4"
   },
   "devDependencies": {
     "@types/chai": "^4.3.8",
+    "@types/dot-object": "^2.1.4",
     "@types/mocha": "^10.0.2",
     "@types/node": "^20.8.0",
     "@types/sinon": "^10.0.19",

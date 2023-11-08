@@ -75,6 +75,7 @@ export class PulumiPlugin extends BasePlugin {
        pulumi stack init --stack ${inputs.datacenterid} &&
        ${state_import_cmd}
        pulumi refresh --stack ${inputs.datacenterid} --non-interactive --yes &&
+       rm *.${inputs.datacenterid}.yaml &&
        ${pulumi_config}
        pulumi ${apply_or_destroy} --stack ${inputs.datacenterid} --non-interactive --yes &&
        echo "${output_delimiter}" &&

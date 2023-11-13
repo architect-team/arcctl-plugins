@@ -123,8 +123,7 @@ export abstract class BasePlugin {
    * via `emitter.buildOutput()`.
    */
   build(emitter: EventEmitter, inputs: BuildInputs): void {
-    const args = ['build', inputs.directory];
-
+    const args = ['build', '--quiet'];
     if (!existsSync(path.join(inputs.directory, 'Dockerfile'))) {
       if (existsSync(DEFAULT_DOCKERFILE)) {
         args.push('-f', path.resolve(DEFAULT_DOCKERFILE));
@@ -133,15 +132,15 @@ export abstract class BasePlugin {
         return;
       }
     }
+    args.push(inputs.directory);
 
-    const docker_result = spawn('docker', args, { cwd: inputs.directory });
-
+    const docker_result = spawn('docker', args);
     let image_digest = '';
     const processChunk = (chunk: Buffer) => {
-      emitter.log(chunk.toString());
+      const chunk_str = chunk.toString();
+      emitter.log(chunk_str);
 
-      const chunk_str = chunk.toString('utf8')
-      const matches = chunk_str.match(/.*writing.*(sha256:\w+).*/);
+      const matches = chunk_str.match(/(sha256:[a-f0-9]{64})/);
       if (matches && matches[1]) {
         image_digest = matches[1];
       }
@@ -163,7 +162,9 @@ export abstract class BasePlugin {
     });
 
     docker_result.on('close', (code) => {
-      if (code === 0 && image_digest !== '') {
+      if (image_digest === '') {
+        emitter.error(`Failed to collect image digest. Args: ${JSON.stringify(args)}`);
+      } else if (code === 0) {
         emitter.buildOutput(image_digest);
       } else {
         emitter.error(`Exited with exit code: ${code}`);

@@ -140,9 +140,11 @@ export abstract class BasePlugin {
       const chunk_str = chunk.toString();
       emitter.log(chunk_str);
 
-      const matches = chunk_str.match(/(sha256:[a-f0-9]{64})/);
-      if (matches && matches[1]) {
-        image_digest = matches[1];
+      if (chunk_str) {
+        const matches = chunk_str.match(/(sha256:[a-f0-9]{64})/);
+        if (matches && matches[1]) {
+          image_digest = matches[1];
+        }
       }
     }
 
@@ -162,7 +164,7 @@ export abstract class BasePlugin {
     });
 
     docker_result.on('close', (code) => {
-      if (image_digest === '') {
+      if (!image_digest) {
         emitter.error(`Failed to collect image digest. Args: ${JSON.stringify(args)}`);
       } else if (code === 0) {
         emitter.buildOutput(image_digest);

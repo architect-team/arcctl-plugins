@@ -6,12 +6,12 @@ import WebSocket from "ws";
 
 type BuildRequest = {
   directory: string;
-  platform: string;
+  platform?: string;
 };
 
 export interface BuildInputs {
   directory: string;
-  platform: string;
+  platform?: string;
 };
 
 export interface ApplyInputs {

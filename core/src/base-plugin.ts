@@ -6,10 +6,12 @@ import WebSocket from "ws";
 
 type BuildRequest = {
   directory: string;
+  platform: string;
 };
 
 export interface BuildInputs {
   directory: string;
+  platform: string;
 };
 
 export interface ApplyInputs {
@@ -124,6 +126,9 @@ export abstract class BasePlugin {
    */
   build(emitter: EventEmitter, inputs: BuildInputs): void {
     const args = ['build', '--quiet'];
+    if (inputs.platform) {
+      args.push(...['--platform', inputs.platform])
+    }
     if (!existsSync(path.join(inputs.directory, 'Dockerfile'))) {
       if (existsSync(DEFAULT_DOCKERFILE)) {
         args.push('-f', path.resolve(DEFAULT_DOCKERFILE));

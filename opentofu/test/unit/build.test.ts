@@ -35,9 +35,8 @@ describe('build commands', () => {
 
     expect(docker_command_args[0]).to.equal('docker');
     expect(docker_build_args[0]).to.equal('build');
-    expect(docker_build_args[1]).to.equal('--quiet');
-    expect(docker_build_args[2]).to.equal('-f');
+    expect(docker_build_args[1]).to.equal('-f');
     // Skip [3], it's a dockerfile
-    expect(docker_build_args[4]).to.equal(directory);
+    expect(docker_build_args[3]).to.equal(directory);
   });
 });

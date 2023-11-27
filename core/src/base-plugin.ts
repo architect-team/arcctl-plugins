@@ -125,7 +125,7 @@ export abstract class BasePlugin {
    * via `emitter.buildOutput()`.
    */
   build(emitter: EventEmitter, inputs: BuildInputs): void {
-    const args = ['build', '--quiet'];
+    const args = ['build'];
     if (inputs.platform) {
       args.push(...['--platform', inputs.platform])
     }
@@ -141,15 +141,15 @@ export abstract class BasePlugin {
 
     const docker_result = spawn('docker', args);
     let image_digest = '';
+    let full_response = '';
     const processChunk = (chunk: Buffer) => {
       const chunk_str = chunk.toString();
+      full_response += chunk_str;
       emitter.log(chunk_str);
 
-      if (chunk_str) {
-        const matches = chunk_str.match(/(sha256:[a-f0-9]{64})/);
-        if (matches && matches[1]) {
-          image_digest = matches[1];
-        }
+      const matches = full_response.match(/writing image (sha256:[a-f0-9]{64})/);
+      if (matches && matches[1]) {
+        image_digest = matches[1];
       }
     }
 

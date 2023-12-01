@@ -125,7 +125,7 @@ export abstract class BasePlugin {
    * via `emitter.buildOutput()`.
    */
   build(emitter: EventEmitter, inputs: BuildInputs): void {
-    const args = ['build'];
+    const args = ['build', '--quiet'];
     if (inputs.platform) {
       args.push(...['--platform', inputs.platform])
     }
@@ -147,7 +147,7 @@ export abstract class BasePlugin {
       full_response += chunk_str;
       emitter.log(chunk_str);
 
-      const matches = full_response.match(/writing image (sha256:[a-f0-9]{64})/);
+      const matches = full_response.match(/(sha256:[a-f0-9]{64})/);
       if (matches && matches[1]) {
         image_digest = matches[1];
       }
